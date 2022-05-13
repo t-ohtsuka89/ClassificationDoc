@@ -292,10 +292,8 @@ def main():
     logger = set_logger(opt.log_file)
     logger.info(opt)
 
-    if opt.label == "label1":
-        text_list, label_list = make_dataset(opt.processed_label1_dir, opt.processed_texts_dir)
-    else:
-        text_list, label_list = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir)
+    label_dir: str = opt.processed_label1_dir if opt.label == "label1" else opt.processed_label2_dir
+    text_list, label_list = make_dataset(label_dir, opt.processed_texts_dir)
 
     train_text, val_test_text, train_label, val_test_label = train_test_split(
         text_list, label_list, test_size=0.2, shuffle=True, random_state=123
