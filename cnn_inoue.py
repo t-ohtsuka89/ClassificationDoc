@@ -22,45 +22,12 @@ from tqdm import tqdm
 
 
 class FeatureVectorizer:
-    def __init__(self, do_wakati=False, feature_type="bow"):
-        self.vectorizer = CountVectorizer(lowercase=False)
+    def __init__(self):
         self.mecab_wakati_tagger = MeCab.Tagger("-Owakati")
         self.mecab_tagger = MeCab.Tagger()
-        self.do_wakati = do_wakati
-        self.feature_type = feature_type
-
-    def merge_noun(self, text):
-        nodes = self.mecab_tagger.parse(text).split("\n")
-        words = []
-        noun_phrase = ""
-        for line in nodes:
-            line = line.split("\t")
-            if len(line) == 1:
-                continue
-            else:
-                word, part_of_speech = line[0], line[4]
-
-            if "名詞" in part_of_speech:
-                noun_phrase += word
-                continue
-            else:
-                if noun_phrase != "":
-                    words.append(noun_phrase)
-                    noun_phrase = ""
-                words.append(word)
-
-        return " ".join(words)
 
     def make_feature_vector(self, corpus_list):
-        if self.do_wakati:
-            if self.feature_type == "bow":
-                corpus_list = [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
-            elif self.feature_type == "bop":
-                corpus_list = [self.merge_noun(text) for text in tqdm(corpus_list, ncols=70)]
-            else:
-                raise ValueError(f"Unexpected feature type has been selected.:{self.feature_type}")
-
-        return corpus_list
+        return [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
 
 
 def set_logger(logfile):
@@ -332,16 +299,9 @@ def train_model(
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--processed_texts_dir", default="./data/texts")
-    parser.add_argument("--processed_label1_dir", default="./data/level1")
-    parser.add_argument("--processed_label2_dir", default="./data/level2")
-    parser.add_argument("--label", choices=["label1", "label2"], default="label1")
-    parser.add_argument("--do_wakati", action="store_true", help="Perform tokenization by MeCab")
-    parser.add_argument(
-        "--feature_type",
-        choices=["bow", "bop"],
-        default="bow",
-        help="bow: Bag of Words, bop:Bag of Phrases",
-    )
+    parser.add_argument("--processed_label1_dir", default="./data/label_level1")
+    parser.add_argument("--processed_label2_dir", default="./data/label_level2")
+    parser.add_argument("--label", choices=["label1", "label2"], default="label2")
     parser.add_argument("--method", choices=["LinearSVC", "SVC"])
     parser.add_argument("--show_report", action="store_true", help="Show evaluation details")
 
@@ -358,7 +318,7 @@ def main():
         dataset_dict = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir, text_files)
 
     logger.info("Vectorize train text...")
-    vectorizer = FeatureVectorizer(do_wakati=opt.do_wakati, feature_type=opt.feature_type)
+    vectorizer = FeatureVectorizer()
     X_train = vectorizer.make_feature_vector(dataset_dict["train"]["text"])
     logger.info("Done.")
     logger.info("Vectorize validation text...")
