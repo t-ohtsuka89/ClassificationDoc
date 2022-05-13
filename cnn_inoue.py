@@ -329,7 +329,7 @@ def main():
     VOCAB_SIZE = len(set(word2id.values())) + 2  # 辞書のID数 + パディングID
     EMB_SIZE = 100
     PADDING_IDX = 0
-    OUTPUT_SIZE = y_train.shape[1]  # ラベルの総種類数
+    OUTPUT_SIZE = len(mlb.classes_)  # ラベルの総種類数
     OUT_CHANNELS = 200
     KERNEL_HEIGHTS = 3
     STRIDE = 1
