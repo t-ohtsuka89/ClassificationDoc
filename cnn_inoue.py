@@ -47,7 +47,6 @@ def set_logger(logfile):
 
 def make_dataset(labels_dir, texts_dir):
     text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
-    dataset_dict = {}
     text_list = []
     label_list = []
     for text_file in text_files:
@@ -66,25 +65,7 @@ def make_dataset(labels_dir, texts_dir):
             text_list.append(text)
             label_list.append(label)
 
-    train_text, val_test_text, train_label, val_test_label = train_test_split(
-        text_list, label_list, test_size=0.2, shuffle=True, random_state=123
-    )
-
-    val_text, test_text, val_label, test_label = train_test_split(
-        val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
-    )
-
-    dataset_dict["train"] = {}
-    dataset_dict["train"]["text"] = train_text
-    dataset_dict["train"]["label"] = train_label
-    dataset_dict["val"] = {}
-    dataset_dict["val"]["text"] = val_text
-    dataset_dict["val"]["label"] = val_label
-    dataset_dict["test"] = {}
-    dataset_dict["test"]["text"] = test_text
-    dataset_dict["test"]["label"] = test_label
-
-    return dataset_dict
+    return text_list, label_list
 
 
 class CNN(torch.nn.Module):
@@ -312,28 +293,35 @@ def main():
     logger.info(opt)
 
     if opt.label == "label1":
-        dataset_dict = make_dataset(opt.processed_label1_dir, opt.processed_texts_dir)
+        text_list, label_list = make_dataset(opt.processed_label1_dir, opt.processed_texts_dir)
     else:
-        dataset_dict = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir)
+        text_list, label_list = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir)
+
+    train_text, val_test_text, train_label, val_test_label = train_test_split(
+        text_list, label_list, test_size=0.2, shuffle=True, random_state=123
+    )
+    val_text, test_text, val_label, test_label = train_test_split(
+        val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
+    )
 
     logger.info("Vectorize train text...")
     vectorizer = FeatureVectorizer()
-    X_train = vectorizer.make_feature_vector(dataset_dict["train"]["text"])
+    X_train = vectorizer.make_feature_vector(train_text)
     logger.info("Done.")
     logger.info("Vectorize validation text...")
-    X_val = vectorizer.make_feature_vector(dataset_dict["val"]["text"])
+    X_val = vectorizer.make_feature_vector(val_text)
     logger.info("Done.")
     logger.info("Vectorize test text...")
-    X_test = vectorizer.make_feature_vector(dataset_dict["test"]["text"])
+    X_test = vectorizer.make_feature_vector(test_text)
     logger.info("Done.")
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print(device)
 
     mlb = MultiLabelBinarizer()
-    y_train = mlb.fit_transform(dataset_dict["train"]["label"])
-    y_val = mlb.transform(dataset_dict["val"]["label"])
-    y_test = mlb.transform(dataset_dict["test"]["label"])
+    y_train = mlb.fit_transform(train_label)
+    y_val = mlb.transform(val_label)
+    y_test = mlb.transform(test_label)
 
     dict = defaultdict(int)
     table = str.maketrans(string.punctuation, " " * len(string.punctuation))
