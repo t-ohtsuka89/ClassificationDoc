@@ -284,21 +284,20 @@ def main():
     vectorizer = FeatureVectorizer()
     text_list = vectorizer.make_feature_vector(text_list)
     logger.info("Done.")
+    logger.info("Multi label binarize...")
+    mlb = MultiLabelBinarizer()
+    label_list = mlb.fit_transform(label_list)
+    logger.info("Done.")
 
-    X_train, val_test_text, train_label, val_test_label = train_test_split(
+    X_train, val_test_text, y_train, val_test_label = train_test_split(
         text_list, label_list, test_size=0.2, shuffle=True, random_state=123
     )
-    X_val, X_test, val_label, test_label = train_test_split(
+    X_val, X_test, y_val, y_test = train_test_split(
         val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
     )
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print(device)
-
-    mlb = MultiLabelBinarizer()
-    y_train = mlb.fit_transform(train_label)
-    y_val = mlb.transform(val_label)
-    y_test = mlb.transform(test_label)
 
     dict = defaultdict(int)
     table = str.maketrans(string.punctuation, " " * len(string.punctuation))
