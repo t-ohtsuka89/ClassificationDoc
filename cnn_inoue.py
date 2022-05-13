@@ -11,7 +11,6 @@ import numpy
 import regex
 import torch
 import torch.nn
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
@@ -46,7 +45,8 @@ def set_logger(logfile):
     return logger
 
 
-def make_dataset(labels_dir, texts_dir, text_files):
+def make_dataset(labels_dir, texts_dir):
+    text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
     dataset_dict = {}
     text_list = []
     label_list = []
@@ -311,11 +311,10 @@ def main():
     logger = set_logger(opt.log_file)
     logger.info(opt)
 
-    text_files = glob.glob(opt.processed_texts_dir + "/*.txt")
     if opt.label == "label1":
-        dataset_dict = make_dataset(opt.processed_label1_dir, opt.processed_texts_dir, text_files)
+        dataset_dict = make_dataset(opt.processed_label1_dir, opt.processed_texts_dir)
     else:
-        dataset_dict = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir, text_files)
+        dataset_dict = make_dataset(opt.processed_label2_dir, opt.processed_texts_dir)
 
     logger.info("Vectorize train text...")
     vectorizer = FeatureVectorizer()
