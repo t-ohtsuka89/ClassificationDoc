@@ -74,34 +74,34 @@ class CNN(torch.nn.Module):
         super().__init__()
         self.kernel_heights = kernel_heights
         self.Emb = torch.nn.Embedding(vocab_size, emb_size, padding_idx=0)
+        self.n_grams = [2, 3, 4]
         # self.Emb = torch.nn.Embedding.from_pretrained(emb_weights, padding_idx=0)
-        self.conv1 = torch.nn.Conv2d(1, out_channels, (2, emb_size), padding=(0, 0))
-        self.conv2 = torch.nn.Conv2d(1, out_channels, (3, emb_size), padding=(1, 0))
-        self.conv3 = torch.nn.Conv2d(1, out_channels, (4, emb_size), padding=(2, 0))
+        for i in range(len(self.n_grams)):
+            conv = torch.nn.Conv2d(
+                1,
+                out_channels,
+                (self.n_grams[i], emb_size),
+                padding=(i, 0),
+            )
+            setattr(self, f"conv_{i}", conv)
         self.drop = torch.nn.Dropout(drop_rate)
         self.output = torch.nn.Linear(out_channels * 3, output_size)
+
+    def get_conv(self, i):
+        return getattr(self, f"conv_{i}")
 
     def forward(self, x, x_len):
         emb = self.Emb(x)
 
-        conv1 = self.conv1(emb.unsqueeze(1))
-        conv2 = self.conv2(emb.unsqueeze(1))
-        conv3 = self.conv3(emb.unsqueeze(1))
+        conv_results = []
+        for i in range(len(self.n_grams)):
+            conv_x = self.get_conv(i)(emb.unsqueeze(1))
+            conv_x = F.relu(conv_x.squeeze(3))
+            conv_x = F.max_pool1d(conv_x, conv_x.size()[2])
+            conv_x = conv_x.squeeze(2)
+            conv_results.append(conv_x)
 
-        relu1 = F.relu(conv1.squeeze(3))
-        relu2 = F.relu(conv2.squeeze(3))
-        relu3 = F.relu(conv3.squeeze(3))
-
-        max_pool1 = F.max_pool1d(relu1, relu1.size()[2])
-        max_pool2 = F.max_pool1d(relu2, relu2.size()[2])
-        max_pool3 = F.max_pool1d(relu3, relu3.size()[2])
-
-        out1 = max_pool1.squeeze(2)
-        out2 = max_pool2.squeeze(2)
-        out3 = max_pool3.squeeze(2)
-
-        out = torch.cat([out1, out2, out3], dim=1)
-
+        out = torch.cat(conv_results, dim=1)
         out = self.output(self.drop(out))
         return out
 
