@@ -4,7 +4,6 @@ import os
 import string
 import time
 from collections import defaultdict
-from logging import DEBUG, FileHandler, Formatter, StreamHandler, getLogger
 
 import MeCab
 import numpy
@@ -19,6 +18,8 @@ from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from utils.logging import set_logger
+
 
 class FeatureVectorizer:
     def __init__(self):
@@ -27,22 +28,6 @@ class FeatureVectorizer:
 
     def make_feature_vector(self, corpus_list: list[str]) -> list[str]:
         return [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
-
-
-def set_logger(logfile):
-    logger = getLogger(__name__)
-    logger.setLevel(DEBUG)
-
-    stream_handler = StreamHandler()
-    stream_handler.setFormatter(Formatter("%(asctime)s |%(levelname)s| %(message)s"))
-
-    file_handler = FileHandler(filename=logfile)
-    file_handler.setFormatter(Formatter("%(asctime)s |%(levelname)s| %(message)s"))
-
-    logger.addHandler(stream_handler)
-    logger.addHandler(file_handler)
-
-    return logger
 
 
 def make_dataset(labels_dir: str, texts_dir: str):
