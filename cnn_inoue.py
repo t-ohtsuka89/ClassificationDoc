@@ -53,6 +53,11 @@ def make_dataset(labels_dir: str, texts_dir: str):
     return text_list, label_list
 
 
+def tokenizer(text: str, word2id: dict[str, int], unk: int = 1):
+    table = str.maketrans(string.punctuation, " " * len(string.punctuation))
+    return [word2id.get(word, unk) for word in text.translate(table).split()]
+
+
 class CNN(torch.nn.Module):
     def __init__(
         self,
@@ -284,6 +289,7 @@ def main():
     vectorizer = FeatureVectorizer()
     text_list = vectorizer.make_feature_vector(text_list)
     logger.info("Done.")
+
     logger.info("Multi label binarize...")
     mlb = MultiLabelBinarizer()
     label_list = mlb.fit_transform(label_list)
@@ -299,24 +305,21 @@ def main():
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    dict = defaultdict(int)
+    word_count: defaultdict[str, int] = defaultdict(int)
     table = str.maketrans(string.punctuation, " " * len(string.punctuation))
     for text in X_train:
+        text: str
         for word in text.translate(table).split():
-            dict[word] += 1
-    dict = sorted(dict.items(), key=lambda x: x[1], reverse=True)
+            word_count[word] += 1
+    word_freq_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
 
     # 単語ID辞書の作成
-    word2id = {word: i + 2 for i, (word, cnt) in enumerate(dict) if cnt > 0}
+    word2id: dict[str, int] = {word: i + 2 for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0}
 
     # IDへ変換
-    def tokenizer(text, word2id=word2id, unk=1):
-        table = str.maketrans(string.punctuation, " " * len(string.punctuation))
-        return [word2id.get(word, unk) for word in text.translate(table).split()]
-
-    train_text_id = [tokenizer(line) for line in tqdm(X_train)]
-    valid_text_id = [tokenizer(line) for line in tqdm(X_val)]
-    test_text_id = [tokenizer(line) for line in tqdm(X_test)]
+    train_text_id = [tokenizer(line, word2id) for line in tqdm(X_train)]
+    valid_text_id = [tokenizer(line, word2id) for line in tqdm(X_val)]
+    test_text_id = [tokenizer(line, word2id) for line in tqdm(X_test)]
 
     dataset_train = CreateDataset(train_text_id, y_train)
     dataset_valid = CreateDataset(valid_text_id, y_val)
