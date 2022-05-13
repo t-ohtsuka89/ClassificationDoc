@@ -15,6 +15,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 from torch import Tensor, optim
 from torch.nn import functional as F
+from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
@@ -90,7 +91,7 @@ class CNN(torch.nn.Module):
     def get_conv(self, i: int):
         return getattr(self, f"conv_{i}")
 
-    def forward(self, x: Tensor, x_len):
+    def forward(self, x: Tensor):
         emb: Tensor = self.emb(x)
 
         conv_results: list[Tensor] = []
@@ -115,11 +116,9 @@ class CreateDataset(Dataset):
         return len(self.y)
 
     def __getitem__(self, index):  # Dataset[index]で返す値を指定
-        inputs = self.X[index]
-
         return {
-            "inputs": torch.tensor(inputs, dtype=torch.int64),
-            "labels": torch.tensor(self.y[index], dtype=torch.float64),
+            "input": torch.tensor(self.X[index], dtype=torch.int64),
+            "labels": torch.tensor(self.y[index], dtype=torch.float32),
         }
 
 
@@ -130,13 +129,10 @@ class Padsequence:
         self.padding_idx = padding_idx
 
     def __call__(self, batch):
-        sorted_batch = sorted(batch, key=lambda x: x["inputs"].shape[0], reverse=True)
-        sequences = [x["inputs"] for x in sorted_batch]
-        sequences_len = [len(x["inputs"]) for x in sorted_batch]
-        sequences_padded = torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True, padding_value=self.padding_idx)
-        labels = torch.stack([x["labels"] for x in sorted_batch])
-
-        return {"inputs": sequences_padded, "labels": labels}, sequences_len
+        inputs = [sample["input"] for sample in batch]
+        labels_list = [sample["labels"] for sample in batch]
+        padded_inputs = pad_sequence(inputs, batch_first=True)  # padding
+        return {"input": padded_inputs.contiguous(), "labels": torch.stack(labels_list).contiguous()}
 
 
 def calculate_loss_and_accuracy(model, dataset, device=None, criterion=None, OUTPUT_SIZE=None):
@@ -150,13 +146,14 @@ def calculate_loss_and_accuracy(model, dataset, device=None, criterion=None, OUT
     all_pred = numpy.empty([0, OUTPUT_SIZE])
     all_labels = numpy.empty([0, OUTPUT_SIZE])
     with torch.no_grad():
-        for data, data_len in dataloader:
+        for batch in dataloader:
+            batch: dict[str, Tensor]
             # デバイスの指定
-            inputs = data["inputs"].to(device)
-            labels = data["labels"].to(device)
+            inputs = batch["input"].to(device)
+            labels = batch["labels"].to(device)
             # print(labels)
             # 順伝播
-            outputs = model(inputs, data_len)
+            outputs = model(inputs)
 
             # 損失計算
             if criterion != None:
@@ -211,14 +208,14 @@ def train_model(
         cnt = 1
         # 訓練モードに設定
         model.train()
-        for data, data_len in dataloader_train:
+        for batch in dataloader_train:
             # 勾配をゼロで初期化
             optimizer.zero_grad()
 
             # 順伝播 + 誤差逆伝播 + 重み更新
-            inputs = data["inputs"].to(device)
-            labels = data["labels"].to(device)
-            outputs = model(inputs, data_len)
+            inputs = batch["input"].to(device)
+            labels = batch["labels"].to(device)
+            outputs = model(inputs)
             # print(cnt)
             # print(outputs)
             loss = criterion(outputs, labels)
