@@ -280,23 +280,17 @@ def main():
     label_dir: str = opt.processed_label1_dir if opt.label == "label1" else opt.processed_label2_dir
     text_list, label_list = make_dataset(label_dir, opt.processed_texts_dir)
 
-    train_text, val_test_text, train_label, val_test_label = train_test_split(
+    logger.info("Vectorize text...")
+    vectorizer = FeatureVectorizer()
+    text_list = vectorizer.make_feature_vector(text_list)
+    logger.info("Done.")
+
+    X_train, val_test_text, train_label, val_test_label = train_test_split(
         text_list, label_list, test_size=0.2, shuffle=True, random_state=123
     )
-    val_text, test_text, val_label, test_label = train_test_split(
+    X_val, X_test, val_label, test_label = train_test_split(
         val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
     )
-
-    logger.info("Vectorize train text...")
-    vectorizer = FeatureVectorizer()
-    X_train = vectorizer.make_feature_vector(train_text)
-    logger.info("Done.")
-    logger.info("Vectorize validation text...")
-    X_val = vectorizer.make_feature_vector(val_text)
-    logger.info("Done.")
-    logger.info("Vectorize test text...")
-    X_test = vectorizer.make_feature_vector(test_text)
-    logger.info("Done.")
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print(device)
