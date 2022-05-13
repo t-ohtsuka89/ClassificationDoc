@@ -25,7 +25,7 @@ class FeatureVectorizer:
         self.mecab_wakati_tagger = MeCab.Tagger("-Owakati")
         self.mecab_tagger = MeCab.Tagger()
 
-    def make_feature_vector(self, corpus_list):
+    def make_feature_vector(self, corpus_list: list[str]) -> list[str]:
         return [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
 
 
@@ -45,10 +45,10 @@ def set_logger(logfile):
     return logger
 
 
-def make_dataset(labels_dir, texts_dir):
+def make_dataset(labels_dir: str, texts_dir: str):
     text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
-    text_list = []
-    label_list = []
+    text_list: list[str] = []
+    label_list: list[list[str]] = []
     for text_file in text_files:
         file_basename = os.path.basename(text_file)
         p = regex.match(r"(.*)_k_s.txt", file_basename)
