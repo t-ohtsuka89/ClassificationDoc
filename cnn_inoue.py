@@ -51,7 +51,7 @@ class FeatureVectorizer:
 
         return " ".join(words)
 
-    def make_feature_vector(self, corpus_list, is_test=False):
+    def make_feature_vector(self, corpus_list):
         if self.do_wakati:
             if self.feature_type == "bow":
                 corpus_list = [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
@@ -59,11 +59,6 @@ class FeatureVectorizer:
                 corpus_list = [self.merge_noun(text) for text in tqdm(corpus_list, ncols=70)]
             else:
                 raise ValueError(f"Unexpected feature type has been selected.:{self.feature_type}")
-
-        if is_test:
-            feature_vector = self.vectorizer.transform(corpus_list).toarray()
-        else:
-            feature_vector = self.vectorizer.fit_transform(corpus_list).toarray()
 
         return corpus_list
 
@@ -201,8 +196,6 @@ class Padsequence:
         sequences = [x["inputs"] for x in sorted_batch]
         sequences_len = [len(x["inputs"]) for x in sorted_batch]
         sequences_padded = torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True, padding_value=self.padding_idx)
-        # sequences_len = [len(i) for i in sequences_padded]
-        # sequences_pack_padded = torch.nn.utils.rnn.pack_padded_sequence(sequences_padded, sequences_len, batch_first=True, enforce_sorted=False)
         labels = torch.stack([x["labels"] for x in sorted_batch])
 
         return {"inputs": sequences_padded, "labels": labels}, sequences_len
@@ -240,13 +233,7 @@ def calculate_loss_and_accuracy(model, dataset, device=None, criterion=None, OUT
 
             all_pred = numpy.append(all_pred, y_pred, axis=0)
             all_labels = numpy.append(all_labels, y_true, axis=0)
-            # accuracy = accuracy_score(y_true, y_pred)
-            # f1_micro = f1_score(y_true, y_pred, average='micro')
-            # total += len(inputs)
-            # print(accuracy)
-            # print(f1_micro)
-            # acc_sum += accuracy
-            # f1_sum += f1_micro
+
         all_labels_int = all_labels.astype("int64")
         all_pred_int = all_pred.astype("int64")
         f1_micro = f1_score(all_labels_int, all_pred_int, average="micro")
@@ -375,10 +362,10 @@ def main():
     X_train = vectorizer.make_feature_vector(dataset_dict["train"]["text"])
     logger.info("Done.")
     logger.info("Vectorize validation text...")
-    X_val = vectorizer.make_feature_vector(dataset_dict["val"]["text"], is_test=True)
+    X_val = vectorizer.make_feature_vector(dataset_dict["val"]["text"])
     logger.info("Done.")
     logger.info("Vectorize test text...")
-    X_test = vectorizer.make_feature_vector(dataset_dict["test"]["text"], is_test=True)
+    X_test = vectorizer.make_feature_vector(dataset_dict["test"]["text"])
     logger.info("Done.")
 
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
@@ -407,14 +394,6 @@ def main():
     train_text_id = [tokenizer(line) for line in tqdm(X_train)]
     valid_text_id = [tokenizer(line) for line in tqdm(X_val)]
     test_text_id = [tokenizer(line) for line in tqdm(X_test)]
-    # train_text_np = numpy.array(train_text_id)
-    # valid_text_np = numpy.array(valid_text_id)
-    # test_text_np = numpy.array(test_text_id)
-
-    # パティングを行う
-    # x_train = sequence.pad_sequences(train_text_np, padding="post", dtype="int64")
-    # x_val = sequence.pad_sequences(valid_text_np, padding="post", dtype="int64")
-    # x_test = sequence.pad_sequences(test_text_np, padding="post", dtype="int64")
 
     dataset_train = CreateDataset(train_text_id, y_train)
     dataset_valid = CreateDataset(valid_text_id, y_val)
@@ -436,90 +415,6 @@ def main():
 
     print(OUTPUT_SIZE)
     weights = torch.zeros(VOCAB_SIZE, EMB_SIZE)
-
-    # for word, idx in word2id.items():
-    #    if word in model.wv.index2word:
-    #        weights[idx] = torch.tensor(model[word])
-
-    # weights = numpy.zeros((VOCAB_SIZE, EMB_SIZE))
-    # for i, word in enumerate(word2id.keys()):
-    #    try:
-    #        weights[i] = model[word]
-    #    except KeyError:
-    #        weights[i] = numpy.random.normal(scale=0.5, size=(EMB_SIZE,))
-    # weights = torch.from_numpy(weights.astype((numpy.float32)))
-
-    def objective(trial):
-
-        # チューニング対象パラメータのセット
-        EMB_SIZE = int(trial.suggest_discrete_uniform("emb_size", 100, 400, 100))
-        OUT_CHANNELS = int(trial.suggest_discrete_uniform("out_channels", 50, 200, 50))
-        DROP_RATE = trial.suggest_discrete_uniform("drop_rate", 0.0, 0.5, 0.1)
-        # LEARNING_LATE = trial.suggest_loguniform('learning_rate', 1e-5, 1e-2)
-        BATCH_SIZE = int(trial.suggest_discrete_uniform("batch_size", 16, 128, 16))
-        # 固定パラメータの設定
-        VOCAB_SIZE = len(set(word2id.values())) + 2
-        PADDING_IDX = 0
-        OUTPUT_SIZE = y_train.shape[1]  # ラベルの総種類数
-        KERNEL_HEIGHTS = 3
-        STRIDE = 1
-        PADDING = 1
-        LEARNING_RATE = 1e-3
-        NUM_EPOCHS = 100
-
-        # モデルの定義
-        model = CNN(
-            VOCAB_SIZE,
-            EMB_SIZE,
-            OUTPUT_SIZE,
-            OUT_CHANNELS,
-            KERNEL_HEIGHTS,
-            STRIDE,
-            PADDING,
-            DROP_RATE,
-            emb_weights=weights,
-        )
-
-        criterion = torch.nn.BCEWithLogitsLoss()
-
-        optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
-
-        device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-
-        log = train_model(
-            dataset_train,
-            dataset_valid,
-            BATCH_SIZE,
-            model,
-            criterion,
-            optimizer,
-            NUM_EPOCHS,
-            collate_fn=Padsequence(PADDING_IDX),
-            device=device,
-            OUTPUT_SIZE=OUTPUT_SIZE,
-        )
-
-        loss_valid, acc_valid, f1_valid = calculate_loss_and_accuracy(
-            model, dataset_valid, device, criterion=criterion, OUTPUT_SIZE=OUTPUT_SIZE
-        )
-
-        return loss_valid
-
-    # study = optuna.create_study()
-    # study.optimize(objective, timeout=360)
-    # print('Best trial:')
-    # trial = study.best_trial
-    # print('  Value: {:.3f}'.format(trial.value))
-    # print('  Params: ')
-    # for key, value in trial.params.items():
-    #    print('    {}: {}'.format(key, value))
-
-    # VOCAB_SIZE = len(set(word2id.values())) + 2
-    # EMB_SIZE = int(trial.params['emb_size'])
-    # PADDING_IDX = 0
-    # OUT_CHANNELS = int(trial.params['out_channels'])
-    # DROP_RATE = trial.params['drop_rate']
-    # BATCH_SIZE = int(trial.params['batch_size'])
 
     model = CNN(
         VOCAB_SIZE,
