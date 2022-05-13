@@ -331,9 +331,9 @@ def train_model(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--processed_texts_dir", default="./data2/texts")
-    parser.add_argument("--processed_label1_dir", default="./data2/level1")
-    parser.add_argument("--processed_label2_dir", default="./data2/level2")
+    parser.add_argument("--processed_texts_dir", default="./data/texts")
+    parser.add_argument("--processed_label1_dir", default="./data/level1")
+    parser.add_argument("--processed_label2_dir", default="./data/level2")
     parser.add_argument("--label", choices=["label1", "label2"], default="label1")
     parser.add_argument("--do_wakati", action="store_true", help="Perform tokenization by MeCab")
     parser.add_argument(
