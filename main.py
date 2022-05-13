@@ -13,7 +13,7 @@ import torch.nn
 from sklearn.metrics import accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
-from torch import optim
+from torch import Tensor, optim
 from torch.nn import functional as F
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
@@ -73,7 +73,7 @@ class CNN(torch.nn.Module):
     ):
         super().__init__()
         self.kernel_heights = kernel_heights
-        self.Emb = torch.nn.Embedding(vocab_size, emb_size, padding_idx=0)
+        self.emb = torch.nn.Embedding(vocab_size, emb_size, padding_idx=0)
         self.n_grams = [2, 3, 4]
         # self.Emb = torch.nn.Embedding.from_pretrained(emb_weights, padding_idx=0)
         for i in range(len(self.n_grams)):
@@ -87,15 +87,15 @@ class CNN(torch.nn.Module):
         self.drop = torch.nn.Dropout(drop_rate)
         self.output = torch.nn.Linear(out_channels * 3, output_size)
 
-    def get_conv(self, i):
+    def get_conv(self, i: int):
         return getattr(self, f"conv_{i}")
 
-    def forward(self, x, x_len):
-        emb = self.Emb(x)
+    def forward(self, x: Tensor, x_len):
+        emb: Tensor = self.emb(x)
 
-        conv_results = []
+        conv_results: list[Tensor] = []
         for i in range(len(self.n_grams)):
-            conv_x = self.get_conv(i)(emb.unsqueeze(1))
+            conv_x: Tensor = self.get_conv(i)(emb.unsqueeze(1))
             conv_x = F.relu(conv_x.squeeze(3))
             conv_x = F.max_pool1d(conv_x, conv_x.size()[2])
             conv_x = conv_x.squeeze(2)
