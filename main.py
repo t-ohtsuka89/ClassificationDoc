@@ -25,7 +25,6 @@ from utils.logging import set_logger
 class FeatureVectorizer:
     def __init__(self):
         self.mecab_wakati_tagger = MeCab.Tagger("-Owakati")
-        self.mecab_tagger = MeCab.Tagger()
 
     def make_feature_vector(self, corpus_list: list[str]) -> list[str]:
         return [self.mecab_wakati_tagger.parse(text) for text in tqdm(corpus_list, ncols=70)]
