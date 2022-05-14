@@ -2,23 +2,21 @@ import argparse
 import glob
 import os
 import string
-import time
 from collections import defaultdict
 
 import MeCab
-import numpy
 import regex
 import torch
 import torch.nn
-from sklearn.metrics import accuracy_score, f1_score
+from pytorch_lightning import Trainer
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
-from torch import Tensor, optim
-from torch.nn import functional as F
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.data import DataLoader, Dataset
 from tqdm import tqdm
 
+from models.cnn import CNN
 from utils.logging import set_logger
 
 
@@ -58,48 +56,6 @@ def tokenizer(text: str, word2id: dict[str, int], unk: int = 1):
     return [word2id.get(word, unk) for word in text.translate(table).split()]
 
 
-class CNN(torch.nn.Module):
-    def __init__(
-        self,
-        vocab_size,
-        emb_size,
-        output_size,
-        out_channels,
-        drop_rate,
-    ):
-        super().__init__()
-        self.emb = torch.nn.Embedding(vocab_size, emb_size, padding_idx=0)
-        self.n_grams = [2, 3, 4]
-        for i in range(len(self.n_grams)):
-            conv = torch.nn.Conv2d(
-                1,
-                out_channels,
-                (self.n_grams[i], emb_size),
-                padding=(i, 0),
-            )
-            setattr(self, f"conv_{i}", conv)
-        self.drop = torch.nn.Dropout(drop_rate)
-        self.output = torch.nn.Linear(out_channels * 3, output_size)
-
-    def get_conv(self, i: int):
-        return getattr(self, f"conv_{i}")
-
-    def forward(self, x: Tensor):
-        emb: Tensor = self.emb(x)
-
-        conv_results: list[Tensor] = []
-        for i in range(len(self.n_grams)):
-            conv_x: Tensor = self.get_conv(i)(emb.unsqueeze(1))
-            conv_x = F.relu(conv_x.squeeze(3))
-            conv_x = F.max_pool1d(conv_x, conv_x.size()[2])
-            conv_x = conv_x.squeeze(2)
-            conv_results.append(conv_x)
-
-        out = torch.cat(conv_results, dim=1)
-        out = self.output(self.drop(out))
-        return out
-
-
 class CreateDataset(Dataset):
     def __init__(self, X, y):
         self.X = X
@@ -128,134 +84,6 @@ class Padsequence:
         return {"input": padded_inputs.contiguous(), "labels": torch.stack(labels_list).contiguous()}
 
 
-def calculate_loss_and_accuracy(model, dataset, device=None, criterion=None, OUTPUT_SIZE=None):
-    """損失・正解率を計算"""
-    PADDING_IDX = 0
-    dataloader = DataLoader(dataset, batch_size=1, shuffle=False, collate_fn=Padsequence(PADDING_IDX))
-    loss = 0.0
-    total = 0
-    acc_sum = 0.0
-    f1_sum = 0.0
-    all_pred = numpy.empty([0, OUTPUT_SIZE])
-    all_labels = numpy.empty([0, OUTPUT_SIZE])
-    with torch.no_grad():
-        for batch in dataloader:
-            batch: dict[str, Tensor]
-            # デバイスの指定
-            inputs = batch["input"].to(device)
-            labels = batch["labels"].to(device)
-            # print(labels)
-            # 順伝播
-            outputs = model(inputs)
-
-            # 損失計算
-            if criterion != None:
-                loss += criterion(outputs, labels).item()
-
-            # 正解率計算
-            outputs_pred = torch.sigmoid(outputs)
-            pred_round = torch.round(outputs_pred)
-
-            y_true = labels.cpu().data.numpy()
-            y_pred = pred_round.cpu().data.numpy()
-
-            all_pred = numpy.append(all_pred, y_pred, axis=0)
-            all_labels = numpy.append(all_labels, y_true, axis=0)
-
-        all_labels_int = all_labels.astype("int64")
-        all_pred_int = all_pred.astype("int64")
-        f1_micro = f1_score(all_labels_int, all_pred_int, average="micro")
-        accuracy = accuracy_score(all_labels_int, all_pred_int)
-    return loss / len(dataset), accuracy, f1_micro  # acc / total, f1_sum / total
-
-
-def train_model(
-    dataset_train,
-    dataset_valid,
-    batch_size,
-    model,
-    criterion,
-    optimizer,
-    num_epochs,
-    collate_fn=None,
-    device=None,
-    OUTPUT_SIZE=None,
-):
-
-    # デバイスの指定
-    model.to(device)
-
-    # dataloaderの作成
-    dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-
-    # スケジューラの設定
-    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=1e-5, last_epoch=-1)
-
-    # 学習
-    log_train = []
-    log_valid = []
-    for epoch in range(num_epochs):
-        # 開始時刻の記録
-        s_time = time.time()
-        cnt = 1
-        # 訓練モードに設定
-        model.train()
-        for batch in dataloader_train:
-            # 勾配をゼロで初期化
-            optimizer.zero_grad()
-
-            # 順伝播 + 誤差逆伝播 + 重み更新
-            inputs = batch["input"].to(device)
-            labels = batch["labels"].to(device)
-            outputs = model(inputs)
-            # print(cnt)
-            # print(outputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            cnt = cnt + 1
-        # 評価モードに設定
-        model.eval()
-
-        # 損失と正解率の算出
-        # loss_train, acc_train, _ = calculate_loss_and_accuracy(model, dataset_train, device, criterion=criterion, OUTPUT_SIZE=OUTPUT_SIZE)
-        loss_valid, acc_valid, f1_valid = calculate_loss_and_accuracy(
-            model, dataset_valid, device, criterion=criterion, OUTPUT_SIZE=OUTPUT_SIZE
-        )
-        # log_train.append([loss_train, acc_train])
-        log_valid.append([loss_valid, acc_valid, f1_valid])
-
-        # チェックポイントの保存
-        torch.save(
-            {
-                "epoch": epoch,
-                "model_state_dict": model.state_dict(),
-                "optimizer_state_dict": optimizer.state_dict(),
-            },
-            f"checkpoint{epoch + 1}.pt",
-        )
-
-        # 終了時刻の記録
-        e_time = time.time()
-
-        # ログを出力
-        print(
-            f"epoch: {epoch + 1}, loss_valid: {loss_valid:.4f}, accuracy_valid: {acc_valid:.4f}, f1_valid: {f1_valid:.4f}, {(e_time - s_time):.4f}sec"
-        )
-
-        # 検証データの損失が3エポック連続で低下しなかった場合は学習終了
-        if (
-            epoch > 2
-            and log_valid[epoch - 3][0] <= log_valid[epoch - 2][0] <= log_valid[epoch - 1][0] <= log_valid[epoch][0]
-        ):
-            break
-
-        # スケジューラを1ステップ進める
-        scheduler.step()
-
-    return {"train": log_train, "valid": log_valid}
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--processed_texts_dir", default="./data/texts")
@@ -281,9 +109,6 @@ def main():
     mlb = MultiLabelBinarizer()
     label_list = mlb.fit_transform(label_list)
     logger.info("Done.")
-
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    print(device)
 
     word_count: defaultdict[str, int] = defaultdict(int)
     table = str.maketrans(string.punctuation, " " * len(string.punctuation))
@@ -320,40 +145,51 @@ def main():
 
     print(OUTPUT_SIZE)
 
+    train_dataloader = DataLoader(
+        dataset_train, batch_size=BATCH_SIZE, shuffle=True, collate_fn=Padsequence(PADDING_IDX)
+    )
+    val_dataloader = DataLoader(dataset_valid, batch_size=1, shuffle=False, collate_fn=Padsequence(PADDING_IDX))
+    test_dataloader = DataLoader(dataset_test, batch_size=1, shuffle=False, collate_fn=Padsequence(PADDING_IDX))
+
     model = CNN(
-        VOCAB_SIZE,
-        EMB_SIZE,
-        OUTPUT_SIZE,
-        OUT_CHANNELS,
-        DROP_RATE,
+        vocab_size=VOCAB_SIZE,
+        output_size=OUTPUT_SIZE,
+        emb_size=EMB_SIZE,
+        out_channels=OUT_CHANNELS,
+        drop_rate=DROP_RATE,
+        padding_idx=PADDING_IDX,
+        learning_rate=LEARNING_RATE,
     )
 
-    criterion = torch.nn.BCEWithLogitsLoss()
+    checkpoint_callback = ModelCheckpoint(
+        dirpath="models",
+        filename="model_best",
+        monitor="val_loss",
+        verbose=False,
+        save_last=False,
+        save_top_k=1,
+        save_weights_only=False,
+        mode="min",
+    )
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=LEARNING_RATE)
+    early_stopping_callback = EarlyStopping(
+        monitor="val_loss",
+        mode="min",
+        patience=3,
+    )
+
+    trainer = Trainer(
+        gpus=1,
+        max_epochs=NUM_EPOCHS,
+        callbacks=[checkpoint_callback, early_stopping_callback],
+    )
 
     logger.info("Training...")
-    log = train_model(
-        dataset_train,
-        dataset_valid,
-        BATCH_SIZE,
-        model,
-        criterion,
-        optimizer,
-        NUM_EPOCHS,
-        collate_fn=Padsequence(PADDING_IDX),
-        device=device,
-        OUTPUT_SIZE=OUTPUT_SIZE,
-    )
+    trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
     logger.info("Testing...")
-    loss_test, acc_test, f1_test = calculate_loss_and_accuracy(
-        model, dataset_test, device, criterion=criterion, OUTPUT_SIZE=OUTPUT_SIZE
-    )
+    trainer = Trainer()
+    trainer.test(model, test_dataloader)
     logger.info("Done.")
-
-    logger.info(f"loss_test:{loss_test}")
-    logger.info(f"accuracy score:{acc_test}")
-    logger.info(f"micro-f1 score:{f1_test}")
 
 
 if __name__ == "__main__":
