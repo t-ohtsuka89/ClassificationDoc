@@ -303,6 +303,8 @@ def main():
             word_count[word] += 1
     word_freq_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
     word2id: dict[str, int] = {word: i + 2 for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0}
+    # IDへ変換
+    text_list = [tokenizer(line, word2id) for line in tqdm(text_list)]
 
     X_train, val_test_text, y_train, val_test_label = train_test_split(
         text_list, label_list, test_size=0.2, shuffle=True, random_state=123
@@ -311,14 +313,9 @@ def main():
         val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
     )
 
-    # IDへ変換
-    train_text_id = [tokenizer(line, word2id) for line in tqdm(X_train)]
-    valid_text_id = [tokenizer(line, word2id) for line in tqdm(X_val)]
-    test_text_id = [tokenizer(line, word2id) for line in tqdm(X_test)]
-
-    dataset_train = CreateDataset(train_text_id, y_train)
-    dataset_valid = CreateDataset(valid_text_id, y_val)
-    dataset_test = CreateDataset(test_text_id, y_test)
+    dataset_train = CreateDataset(X_train, y_train)
+    dataset_valid = CreateDataset(X_val, y_val)
+    dataset_test = CreateDataset(X_test, y_test)
 
     # パラメータの設定
     VOCAB_SIZE = len(set(word2id.values())) + 2  # 辞書のID数 + パディングID
