@@ -65,17 +65,11 @@ class CNN(torch.nn.Module):
         emb_size,
         output_size,
         out_channels,
-        kernel_heights,
-        stride,
-        padding,
         drop_rate,
-        emb_weights=None,
     ):
         super().__init__()
-        self.kernel_heights = kernel_heights
         self.emb = torch.nn.Embedding(vocab_size, emb_size, padding_idx=0)
         self.n_grams = [2, 3, 4]
-        # self.Emb = torch.nn.Embedding.from_pretrained(emb_weights, padding_idx=0)
         for i in range(len(self.n_grams)):
             conv = torch.nn.Conv2d(
                 1,
@@ -294,7 +288,6 @@ def main():
     device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    # 単語ID辞書の作成
     word_count: defaultdict[str, int] = defaultdict(int)
     table = str.maketrans(string.punctuation, " " * len(string.punctuation))
     for text in text_list:
@@ -323,27 +316,19 @@ def main():
     PADDING_IDX = 0
     OUTPUT_SIZE = len(mlb.classes_)  # ラベルの総種類数
     OUT_CHANNELS = 200
-    KERNEL_HEIGHTS = 3
-    STRIDE = 1
-    PADDING = 1
     LEARNING_RATE = 1e-3
     BATCH_SIZE = 80
     NUM_EPOCHS = 100
     DROP_RATE = 0.1
 
     print(OUTPUT_SIZE)
-    weights = torch.zeros(VOCAB_SIZE, EMB_SIZE)
 
     model = CNN(
         VOCAB_SIZE,
         EMB_SIZE,
         OUTPUT_SIZE,
         OUT_CHANNELS,
-        KERNEL_HEIGHTS,
-        STRIDE,
-        PADDING,
         DROP_RATE,
-        emb_weights=weights,
     )
 
     criterion = torch.nn.BCEWithLogitsLoss()
