@@ -291,26 +291,25 @@ def main():
     label_list = mlb.fit_transform(label_list)
     logger.info("Done.")
 
+    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
+    print(device)
+
+    # 単語ID辞書の作成
+    word_count: defaultdict[str, int] = defaultdict(int)
+    table = str.maketrans(string.punctuation, " " * len(string.punctuation))
+    for text in text_list:
+        text: str
+        for word in text.translate(table).split():
+            word_count[word] += 1
+    word_freq_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+    word2id: dict[str, int] = {word: i + 2 for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0}
+
     X_train, val_test_text, y_train, val_test_label = train_test_split(
         text_list, label_list, test_size=0.2, shuffle=True, random_state=123
     )
     X_val, X_test, y_val, y_test = train_test_split(
         val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
     )
-
-    device = torch.device("cuda:1" if torch.cuda.is_available() else "cpu")
-    print(device)
-
-    word_count: defaultdict[str, int] = defaultdict(int)
-    table = str.maketrans(string.punctuation, " " * len(string.punctuation))
-    for text in X_train:
-        text: str
-        for word in text.translate(table).split():
-            word_count[word] += 1
-    word_freq_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
-
-    # 単語ID辞書の作成
-    word2id: dict[str, int] = {word: i + 2 for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0}
 
     # IDへ変換
     train_text_id = [tokenizer(line, word2id) for line in tqdm(X_train)]
