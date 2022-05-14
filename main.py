@@ -263,8 +263,6 @@ def main():
     parser.add_argument("--processed_label1_dir", default="./data/label_level1")
     parser.add_argument("--processed_label2_dir", default="./data/label_level2")
     parser.add_argument("--label", choices=["label1", "label2"], default="label2")
-    parser.add_argument("--method", choices=["LinearSVC", "SVC"])
-    parser.add_argument("--show_report", action="store_true", help="Show evaluation details")
 
     parser.add_argument("--log_file", default="./train_log.log")
     opt = parser.parse_args()
