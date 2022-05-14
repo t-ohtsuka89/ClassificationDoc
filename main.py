@@ -187,7 +187,6 @@ def train_model(
 
     # dataloaderの作成
     dataloader_train = DataLoader(dataset_train, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
-    dataloader_valid = DataLoader(dataset_valid, batch_size=1, shuffle=False)
 
     # スケジューラの設定
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, num_epochs, eta_min=1e-5, last_epoch=-1)
