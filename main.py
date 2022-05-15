@@ -196,8 +196,7 @@ def main():
     logger.info("Training...")
     trainer.fit(model, train_dataloaders=train_dataloader, val_dataloaders=val_dataloader)
     logger.info("Testing...")
-    trainer = Trainer()
-    trainer.test(model, test_dataloader)
+    trainer.test(dataloaders=test_dataloader)
     logger.info("Done.")
 
 
