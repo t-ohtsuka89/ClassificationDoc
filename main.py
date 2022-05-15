@@ -171,7 +171,7 @@ def main():
     )
 
     checkpoint_callback = ModelCheckpoint(
-        dirpath="models",
+        dirpath=os.path.join("models", "checkpoints"),
         filename="model_best",
         monitor="val_loss",
         verbose=False,
