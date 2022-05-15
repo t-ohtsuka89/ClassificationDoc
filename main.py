@@ -103,8 +103,8 @@ def main():
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False  # type: ignore
+    torch.backends.cudnn.deterministic = True  # type: ignore
 
     label_dir: str = opt.processed_label1_dir if opt.label == "label1" else opt.processed_label2_dir
     text_list, label_list = make_dataset(label_dir, opt.processed_texts_dir)
