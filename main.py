@@ -93,7 +93,7 @@ def main():
     parser.add_argument("--processed_label2_dir", default="./data/label_level2")
     parser.add_argument("--label", choices=["label1", "label2"], default="label2")
 
-    parser.add_argument("--log_file", default="./train_log.log")
+    parser.add_argument("--log_file", default="./train.log")
     opt = parser.parse_args()
 
     logger = set_logger(opt.log_file)
@@ -143,12 +143,12 @@ def main():
 
     # パラメータの設定
     VOCAB_SIZE = len(set(word2id.values())) + 2  # 辞書のID数 + パディングID
-    EMB_SIZE = 100
+    EMB_SIZE = 256
     PADDING_IDX = 0
     OUTPUT_SIZE = len(mlb.classes_)  # ラベルの総種類数
     OUT_CHANNELS = 200
     LEARNING_RATE = 1e-3
-    BATCH_SIZE = 80
+    BATCH_SIZE = 64
     NUM_EPOCHS = 100
     DROP_RATE = 0.1
 
