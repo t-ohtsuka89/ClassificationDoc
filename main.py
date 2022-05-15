@@ -1,10 +1,12 @@
 import argparse
 import glob
 import os
+import random
 import string
 from collections import defaultdict
 
 import MeCab
+import numpy as np
 import regex
 import torch
 import torch.nn
@@ -97,6 +99,13 @@ def main():
     logger = set_logger(opt.log_file)
     logger.info(opt)
 
+    seed = 0
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
     label_dir: str = opt.processed_label1_dir if opt.label == "label1" else opt.processed_label2_dir
     text_list, label_list = make_dataset(label_dir, opt.processed_texts_dir)
 
@@ -122,10 +131,10 @@ def main():
     text_list = [tokenizer(line, word2id) for line in tqdm(text_list)]
 
     X_train, val_test_text, y_train, val_test_label = train_test_split(
-        text_list, label_list, test_size=0.2, shuffle=True, random_state=123
+        text_list, label_list, test_size=0.2, shuffle=True, random_state=seed
     )
     X_val, X_test, y_val, y_test = train_test_split(
-        val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=123
+        val_test_text, val_test_label, test_size=0.5, shuffle=True, random_state=seed
     )
 
     dataset_train = CreateDataset(X_train, y_train)
