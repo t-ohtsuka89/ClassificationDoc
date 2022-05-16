@@ -180,12 +180,12 @@ def main():
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("models", "checkpoints"),
         filename="model_best",
-        monitor="val_loss",
+        monitor="val_f1",
         verbose=False,
         save_last=False,
         save_top_k=1,
         save_weights_only=False,
-        mode="min",
+        mode="max",
     )
 
     early_stopping_callback = EarlyStopping(
