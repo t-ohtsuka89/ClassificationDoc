@@ -155,7 +155,10 @@ def main():
     print(OUTPUT_SIZE)
 
     train_dataloader = DataLoader(
-        dataset_train, batch_size=BATCH_SIZE, shuffle=True, collate_fn=Padsequence(PADDING_IDX)
+        dataset_train,
+        batch_size=BATCH_SIZE,
+        shuffle=True,
+        collate_fn=Padsequence(PADDING_IDX),
     )
     val_dataloader = DataLoader(dataset_valid, batch_size=1, shuffle=False, collate_fn=Padsequence(PADDING_IDX))
     test_dataloader = DataLoader(dataset_test, batch_size=1, shuffle=False, collate_fn=Padsequence(PADDING_IDX))
