@@ -83,7 +83,11 @@ class Padsequence:
         inputs = [sample["input"] for sample in batch]
         labels_list = [sample["labels"] for sample in batch]
         padded_inputs = pad_sequence(inputs, batch_first=True)  # padding
-        return {"input": padded_inputs.contiguous(), "labels": torch.stack(labels_list).contiguous()}
+        return {
+            "input": padded_inputs.contiguous(),
+            "labels": torch.stack(labels_list).contiguous(),
+            "lengths": torch.tensor(list(map(len, inputs)), dtype=torch.int64),
+        }
 
 
 def main():
