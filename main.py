@@ -69,7 +69,7 @@ def main(args):
         mode="max",
     )
 
-    early_stopping_callback = EarlyStopping(config["early_stopping"])
+    early_stopping_callback = EarlyStopping(**config["early_stopping"])
 
     trainer = Trainer(
         gpus=1,
