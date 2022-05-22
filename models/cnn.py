@@ -14,6 +14,8 @@ class CNN(pl.LightningModule):
         out_channels: int,
         drop_rate: float,
         learning_rate: float,
+        optimizer: str,
+        T_max: int,
         padding_idx: int = 0,
     ) -> None:
         super().__init__()
@@ -88,8 +90,13 @@ class CNN(pl.LightningModule):
         self.log("test_f1", self.test_f1, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams["learning_rate"])
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 100, eta_min=1e-5, last_epoch=-1)
+        optimizer = torch.optim.__dict__[self.hparams["optimizer"]](
+            self.parameters(),
+            lr=self.hparams["learning_rate"],
+        )
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, self.hparams["T_max"], eta_min=1e-5, last_epoch=-1
+        )
         return [optimizer], [scheduler]
 
     def create_criterion(self):

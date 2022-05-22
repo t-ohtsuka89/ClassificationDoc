@@ -3,8 +3,10 @@ import os
 import random
 
 import numpy as np
+import pytorch_lightning as pl
 import torch
 import torch.nn
+import yaml
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
@@ -13,39 +15,33 @@ from models.cnn import CNN
 from utils.logging import set_logger
 
 
-def main():
+def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--processed_texts_dir", default="./data/texts")
-    parser.add_argument("--processed_label1_dir", default="./data/label_level1")
-    parser.add_argument("--processed_label2_dir", default="./data/label_level2")
-    parser.add_argument("--label", choices=["label1", "label2"], default="label2")
+    parser.add_argument("config_path", type=str, help="設定ファイル(.yaml)")
+    args = parser.parse_args()
+    return args
 
-    parser.add_argument("--log_file", default="./train.log")
-    opt = parser.parse_args()
 
-    logger = set_logger(opt.log_file)
-    logger.info(opt)
+def main(args):
+    with open(args.config_path, "r") as f:
+        config = yaml.safe_load(f)
 
-    seed = 0
-    random.seed(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.backends.cudnn.benchmark = False  # type: ignore
+    logger = set_logger(config["log"]["filename"])
+    logger.info(config)
+
+    seed = config["seed"]
+    pl.seed_everything(seed)
     torch.backends.cudnn.deterministic = True  # type: ignore
 
-    label_dir: str = opt.processed_label1_dir if opt.label == "label1" else opt.processed_label2_dir
+    label_dir = config["dataset"]["label_dir"]
 
     # パラメータの設定
-    EMB_SIZE = 256
     PADDING_IDX = 0
-    OUT_CHANNELS = 200
-    LEARNING_RATE = 1e-3
     BATCH_SIZE = 64
     NUM_EPOCHS = 100
-    DROP_RATE = 0.1
 
     dm = MyDataModule(
-        opt.processed_texts_dir,
+        config["dataset"]["text_dir"],
         label_dir,
         batch_size=BATCH_SIZE,
         seed=seed,
@@ -53,17 +49,13 @@ def main():
     )
 
     dm.setup(stage="fit")
-    VOCAB_SIZE = dm.vocab_size
-    OUTPUT_SIZE = dm.output_size
+    vocab_size = dm.vocab_size
+    output_size = dm.output_size
 
     model = CNN(
-        vocab_size=VOCAB_SIZE,
-        output_size=OUTPUT_SIZE,
-        emb_size=EMB_SIZE,
-        out_channels=OUT_CHANNELS,
-        drop_rate=DROP_RATE,
-        padding_idx=PADDING_IDX,
-        learning_rate=LEARNING_RATE,
+        vocab_size=vocab_size,
+        output_size=output_size,
+        **config["model"],
     )
 
     checkpoint_callback = ModelCheckpoint(
@@ -77,11 +69,7 @@ def main():
         mode="max",
     )
 
-    early_stopping_callback = EarlyStopping(
-        monitor="val_loss",
-        mode="min",
-        patience=3,
-    )
+    early_stopping_callback = EarlyStopping(config["early_stopping"])
 
     trainer = Trainer(
         gpus=1,
@@ -97,4 +85,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    main(get_args())
