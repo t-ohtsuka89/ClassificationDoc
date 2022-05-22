@@ -16,7 +16,7 @@ model:
   out_channels: 200
   drop_rate: 0.1
   optimizer: RAdam
-  learning_rate: 1.0e-2
+  learning_rate: 5.0e-3
   T_max: 100
 
 early_stopping:
