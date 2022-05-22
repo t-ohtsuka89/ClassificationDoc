@@ -35,13 +35,11 @@ def main(args):
 
     # パラメータの設定
     PADDING_IDX = 0
-    BATCH_SIZE = 64
-    NUM_EPOCHS = 100
 
     dm = MyDataModule(
         config["dataset"]["text_dir"],
         label_dir,
-        batch_size=BATCH_SIZE,
+        batch_size=config["train"]["batch_size"],
         seed=seed,
         padding_idx=PADDING_IDX,
     )
@@ -71,7 +69,7 @@ def main(args):
 
     trainer = Trainer(
         gpus=1,
-        max_epochs=NUM_EPOCHS,
+        max_epochs=config["train"]["n_epoch"],
         callbacks=[checkpoint_callback, early_stopping_callback],
     )
 

@@ -7,6 +7,10 @@ dataset:
   text_dir: data/texts
   label_dir: data/label_level2
 
+train:
+  batch_size: 64
+  n_epoch: 100
+
 model:
   emb_size: 256
   out_channels: 200
