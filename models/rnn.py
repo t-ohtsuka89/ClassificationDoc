@@ -21,11 +21,20 @@ class RNN(pl.LightningModule):
         super().__init__()
         self.save_hyperparameters()
 
-        self.emb = nn.Embedding(vocab_size, emb_size, padding_idx=padding_idx)
-        self.drop1 = nn.Dropout(drop_rate)
-        self.bilstm = torch.nn.LSTM(emb_size, hidden_size, num_layers, bidirectional=True, batch_first=True)
-        self.drop2 = nn.Dropout(drop_rate)
-        self.output = nn.Linear(hidden_size * 2, output_size)
+        self.encoder = nn.Embedding(vocab_size, emb_size, padding_idx=padding_idx)
+        self.bilstm = torch.nn.LSTM(
+            emb_size,
+            hidden_size,
+            num_layers,
+            bidirectional=True,
+            batch_first=True,
+            dropout=drop_rate,
+        )
+
+        self.classifier = nn.Sequential(
+            nn.Dropout(drop_rate),
+            nn.Linear(hidden_size * 2, output_size),
+        )
 
         # criterion
         self.criterion = self.create_criterion()
@@ -34,18 +43,21 @@ class RNN(pl.LightningModule):
         self.train_f1 = torchmetrics.F1Score(average="micro", threshold=0.5)
         self.valid_f1 = torchmetrics.F1Score(average="micro", threshold=0.5)
         self.test_f1 = torchmetrics.F1Score(average="micro", threshold=0.5)
+        # self.init_weights()
+
+    def init_weights(self) -> None:
+        initrange = 0.1
+        self.encoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, x: Tensor, seq_len: Tensor):
-        embedded_padded_sequence: Tensor = self.emb(x)
-        embedded_padded_sequence = self.drop1(embedded_padded_sequence)
+        embedded_padded_sequence: Tensor = self.encoder(x)
         packed_x = torch.nn.utils.rnn.pack_padded_sequence(
             embedded_padded_sequence, seq_len, batch_first=True, enforce_sorted=False
         )
         packed_lstm_out, (hidden, cell) = self.bilstm(packed_x)
         lstm_out, input_sizes = torch.nn.utils.rnn.pad_packed_sequence(packed_lstm_out, batch_first=True)
         out: Tensor = lstm_out[:, -1]
-        out = self.drop2(out)
-        out = self.output(out)
+        out = self.classifier(out)
         return out
 
     def training_step(self, batch: dict[str, Tensor], batch_idx):
