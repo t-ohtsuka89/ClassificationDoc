@@ -12,6 +12,7 @@ from torch.utils.data import DataLoader
 
 from collate_fn import Padsequence
 from dataset import CreateDataset
+from special_tokens import SpecialToken
 
 
 class MyDataModule(pl.LightningDataModule):
@@ -21,18 +22,20 @@ class MyDataModule(pl.LightningDataModule):
         label_dir: str,
         batch_size: int,
         seed: int,
+        add_special_token: bool = False,
         padding_idx: int = 0,
     ):
         super().__init__()
         self.save_hyperparameters()
         self.collate_fn = Padsequence(padding_idx)
+        self.special_token_num = len(SpecialToken)
+        assert len(SpecialToken) == 5
 
     def setup(self, stage: str | None):
         tagger = MeCab.Tagger("-Owakati")
         text_list, label_list = self.make_dataset(
             self.hparams["label_dir"], self.hparams["text_dir"]
-        )
-
+            )
         text_list = [tagger.parse(text) for text in text_list]
         mlb = MultiLabelBinarizer()
         label_list = mlb.fit_transform(label_list)
@@ -45,10 +48,10 @@ class MyDataModule(pl.LightningDataModule):
                 word_count[word] += 1
         word_freq_list = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
         word2id: dict[str, int] = {
-            word: i + 2 for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0
+            word: i + self.special_token_num for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0
         }
         # IDへ変換
-        text_list = [self.tokenizer(line, word2id) for line in text_list]
+        text_list = [self.tokenizer(line, word2id, SpecialToken.UNK) for line in text_list]
 
         X_train, val_test_text, y_train, val_test_label = train_test_split(
             text_list,
@@ -67,7 +70,7 @@ class MyDataModule(pl.LightningDataModule):
         self.dataset_train = CreateDataset(X_train, y_train)
         self.dataset_valid = CreateDataset(X_val, y_val)
         self.dataset_test = CreateDataset(X_test, y_test)
-        self.vocab_size = len(set(word2id.values())) + 2
+        self.vocab_size = len(set(word2id.values())) + self.special_token_num
         self.output_size = len(mlb.classes_)
 
     def train_dataloader(self):
@@ -88,9 +91,14 @@ class MyDataModule(pl.LightningDataModule):
             self.dataset_test, batch_size=1, shuffle=False, collate_fn=self.collate_fn
         )
 
-    def tokenizer(self, text: str, word2id: dict[str, int], unk: int = 1):
+    def tokenizer(self, text: str, word2id: dict[str, int]):
         table = str.maketrans(string.punctuation, " " * len(string.punctuation))
-        return [word2id.get(word, unk) for word in text.translate(table).split()]
+        if self.hparams["add_special_token"]:
+            l = [word2id.get(word, SpecialToken.UNK) for word in text.translate(table).split()]
+            l.insert(0, SpecialToken.CLS)
+            return l
+        else:
+            return [word2id.get(word, SpecialToken.UNK) for word in text.translate(table).split()]
 
     def make_dataset(self, labels_dir: str, texts_dir: str):
         text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
@@ -115,4 +123,3 @@ class MyDataModule(pl.LightningDataModule):
                 label_list.append(label)
 
         return text_list, label_list
-    

@@ -41,6 +41,7 @@ def main(args):
         label_dir,
         batch_size=config["train"]["batch_size"],
         seed=seed,
+        add_special_token=config.get("add_special_token", False),
         padding_idx=PADDING_IDX,
     )
 
