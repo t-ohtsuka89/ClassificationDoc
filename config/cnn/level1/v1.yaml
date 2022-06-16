@@ -7,6 +7,8 @@ dataset:
   text_dir: data/texts
   label_dir: data/label_level1
 
+method: CNN
+
 model:
   emb_size: 256
   out_channels: 200

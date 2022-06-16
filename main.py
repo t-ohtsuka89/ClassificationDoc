@@ -48,7 +48,7 @@ def main(args):
     vocab_size = dm.vocab_size
     output_size = dm.output_size
 
-    model: pl.LightningModule = getattr(models, "CNN")(
+    model: pl.LightningModule = getattr(models, config["method"])(
         vocab_size=vocab_size,
         output_size=output_size,
         **config["model"],
