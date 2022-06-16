@@ -9,6 +9,10 @@ dataset:
 
 method: CNN
 
+train:
+  batch_size: 64
+  n_epoch: 100
+
 model:
   emb_size: 256
   out_channels: 200
