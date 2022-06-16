@@ -78,6 +78,7 @@ def main(args):
         max_epochs=config["train"]["max_epochs"],
         min_epochs=config["train"]["min_epochs"],
         callbacks=[checkpoint_callback, early_stopping_callback],
+        accumulate_grad_batches=4,
     )
 
     logger.info("Training...")
