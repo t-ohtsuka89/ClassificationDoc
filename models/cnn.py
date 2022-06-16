@@ -94,10 +94,17 @@ class CNN(pl.LightningModule):
             self.parameters(),
             lr=self.hparams["learning_rate"],
         )
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-            optimizer, self.hparams["T_max"], eta_min=1e-5, last_epoch=-1
-        )
-        return [optimizer], [scheduler]
+
+        if self.hparams["T_max"] is None:
+            return optimizer
+        else:
+            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                optimizer,
+                T_max=self.hparams["T_max"],
+                eta_min=1e-5,
+                last_epoch=-1,
+            )
+            return [optimizer], [scheduler]
 
     def create_criterion(self):
         return nn.BCEWithLogitsLoss()
