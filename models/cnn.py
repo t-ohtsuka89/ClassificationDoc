@@ -32,7 +32,7 @@ class CNN(pl.LightningModule):
             )
             setattr(self, f"conv_{i}", conv)
         self.drop = nn.Dropout(drop_rate)
-        self.output = nn.Linear(out_channels * 3, output_size)
+        self.output = nn.Linear(out_channels * len(self.n_grams), output_size)
 
         # criterion
         self.criterion = self.create_criterion()
