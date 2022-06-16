@@ -49,7 +49,7 @@ class MyDataModule(pl.LightningDataModule):
             word: i + self.special_token_num for i, (word, cnt) in enumerate(word_freq_list) if cnt > 0
         }
         # IDへ変換
-        text_list = [self.tokenizer(line, word2id, SpecialToken.UNK) for line in text_list]
+        text_list = [self.tokenizer(line, word2id) for line in text_list]
 
         X_train, val_test_text, y_train, val_test_label = train_test_split(
             text_list,
