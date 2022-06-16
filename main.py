@@ -10,6 +10,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 import models
 from datamodule import MyDataModule
+from special_tokens import SpecialToken
 from utils.logging import set_logger
 
 
@@ -34,7 +35,7 @@ def main(args):
     label_dir = config["dataset"]["label_dir"]
 
     # パラメータの設定
-    PADDING_IDX = 0
+    PADDING_IDX = SpecialToken.PAD
 
     dm = MyDataModule(
         config["dataset"]["text_dir"],
@@ -52,6 +53,7 @@ def main(args):
     model: pl.LightningModule = getattr(models, config["method"])(
         vocab_size=vocab_size,
         output_size=output_size,
+        padding_idx=PADDING_IDX,
         **config["model"],
     )
 
