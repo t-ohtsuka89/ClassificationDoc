@@ -54,6 +54,8 @@ def main(args):
         **config["model"],
     )
 
+    callbacks = []
+
     checkpoint_callback = ModelCheckpoint(
         dirpath=os.path.join("models", "checkpoints"),
         filename="model_best",
@@ -65,6 +67,8 @@ def main(args):
         mode="max",
     )
     early_stopping_callback = EarlyStopping(**config["early_stopping"])
+    callbacks.append(checkpoint_callback)
+    callbacks.append(early_stopping_callback)
 
     trainer = Trainer(
         gpus=1,
