@@ -33,9 +33,7 @@ class MyDataModule(pl.LightningDataModule):
 
     def setup(self, stage: str | None):
         tagger = MeCab.Tagger("-Owakati")
-        text_list, label_list = self.make_dataset(
-            self.hparams["label_dir"], self.hparams["text_dir"]
-            )
+        text_list, label_list = self.make_dataset(self.hparams["label_dir"], self.hparams["text_dir"])
         text_list = [tagger.parse(text) for text in text_list]
         mlb = MultiLabelBinarizer()
         label_list = mlb.fit_transform(label_list)
@@ -82,14 +80,10 @@ class MyDataModule(pl.LightningDataModule):
         )
 
     def val_dataloader(self):
-        return DataLoader(
-            self.dataset_valid, batch_size=1, shuffle=False, collate_fn=self.collate_fn
-        )
+        return DataLoader(self.dataset_valid, batch_size=1, shuffle=False, collate_fn=self.collate_fn)
 
     def test_dataloader(self):
-        return DataLoader(
-            self.dataset_test, batch_size=1, shuffle=False, collate_fn=self.collate_fn
-        )
+        return DataLoader(self.dataset_test, batch_size=1, shuffle=False, collate_fn=self.collate_fn)
 
     def tokenizer(self, text: str, word2id: dict[str, int]):
         table = str.maketrans(string.punctuation, " " * len(string.punctuation))
@@ -110,9 +104,7 @@ class MyDataModule(pl.LightningDataModule):
             assert p is not None
             file_id = p.groups()[0]
 
-            with open(
-                os.path.join(texts_dir, file_id + "_k_s.txt"), "r"
-            ) as text_file, open(
+            with open(os.path.join(texts_dir, file_id + "_k_s.txt"), "r") as text_file, open(
                 os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
             ) as label_file:
                 text = text_file.read().strip()
