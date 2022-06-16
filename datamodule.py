@@ -70,6 +70,7 @@ class MyDataModule(pl.LightningDataModule):
         self.dataset_test = CreateDataset(X_test, y_test)
         self.vocab_size = len(set(word2id.values())) + self.special_token_num
         self.output_size = len(mlb.classes_)
+        self.max_len = max(map(len, text_list))
 
     def train_dataloader(self):
         return DataLoader(
