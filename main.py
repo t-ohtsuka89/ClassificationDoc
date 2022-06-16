@@ -81,6 +81,12 @@ def main(args):
         accumulate_grad_batches=4,
     )
 
+    if config.get("tuning_lr", False):
+        lr_finder = trainer.tuner.lr_find(model, datamodule=dm)
+        assert lr_finder is not None
+        new_lr = lr_finder.suggestion()
+        model.hparams["learning_rate"] = new_lr
+
     logger.info("Training...")
     trainer.fit(model, datamodule=dm)
     logger.info("Testing...")
