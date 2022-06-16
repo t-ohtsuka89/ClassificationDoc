@@ -8,8 +8,8 @@ import yaml
 from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
+import models
 from datamodule import MyDataModule
-from models.cnn import CNN
 from utils.logging import set_logger
 
 
@@ -48,7 +48,7 @@ def main(args):
     vocab_size = dm.vocab_size
     output_size = dm.output_size
 
-    model = CNN(
+    model: pl.LightningModule = getattr(models, "CNN")(
         vocab_size=vocab_size,
         output_size=output_size,
         **config["model"],
@@ -64,7 +64,6 @@ def main(args):
         save_weights_only=False,
         mode="max",
     )
-
     early_stopping_callback = EarlyStopping(**config["early_stopping"])
 
     trainer = Trainer(
