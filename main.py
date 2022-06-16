@@ -66,7 +66,10 @@ def main(args):
         save_weights_only=False,
         mode="max",
     )
-    early_stopping_callback = EarlyStopping(**config["early_stopping"])
+    early_stopping_callback = EarlyStopping(
+        check_on_train_epoch_end=config["early_stopping"]["monitor"] == "val_f1",
+        **config["early_stopping"],
+    )
     callbacks.append(checkpoint_callback)
     callbacks.append(early_stopping_callback)
 
