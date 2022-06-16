@@ -26,14 +26,14 @@ class MyDataModule(pl.LightningDataModule):
         super().__init__()
         self.save_hyperparameters()
         self.collate_fn = Padsequence(padding_idx)
-        self.tagger = MeCab.Tagger("-Owakati")
 
     def setup(self, stage: str | None):
+        tagger = MeCab.Tagger("-Owakati")
         text_list, label_list = self.make_dataset(
             self.hparams["label_dir"], self.hparams["text_dir"]
         )
 
-        text_list = [self.tagger.parse(text) for text in text_list]
+        text_list = [tagger.parse(text) for text in text_list]
         mlb = MultiLabelBinarizer()
         label_list = mlb.fit_transform(label_list)
 
