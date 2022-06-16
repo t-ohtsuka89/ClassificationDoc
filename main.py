@@ -68,7 +68,7 @@ def main(args):
 
     trainer = Trainer(
         gpus=1,
-        max_epochs=config["train"]["n_epoch"],
+        max_epochs=config["train"]["max_epochs"],
         callbacks=[checkpoint_callback, early_stopping_callback],
     )
 

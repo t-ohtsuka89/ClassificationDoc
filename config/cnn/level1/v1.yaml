@@ -11,7 +11,7 @@ method: CNN
 
 train:
   batch_size: 64
-  n_epoch: 100
+  max_epochs: 100
 
 model:
   emb_size: 256

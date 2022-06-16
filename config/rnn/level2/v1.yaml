@@ -11,7 +11,7 @@ method: RNN
 
 train:
   batch_size: 64
-  n_epoch: 1000
+  max_epochs: 1000
 
 model:
   emb_size: 8
