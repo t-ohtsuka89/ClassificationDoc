@@ -3,3 +3,4 @@ data/*
 lightning_logs/*
 *.log
 *.ckpt
+.nfs*
