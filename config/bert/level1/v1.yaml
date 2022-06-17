@@ -13,6 +13,7 @@ train:
   batch_size: 32
   max_epochs: 10000
   min_epochs: 2500
+  accumulate_grad_batches: 4
 
 model:
   model_name: cl-tohoku/bert-base-japanese

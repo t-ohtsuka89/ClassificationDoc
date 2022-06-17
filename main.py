@@ -91,7 +91,7 @@ def main(args):
         max_epochs=config["train"]["max_epochs"],
         min_epochs=config["train"]["min_epochs"],
         callbacks=callbacks,
-        accumulate_grad_batches=4,
+        accumulate_grad_batches=config["train"].get("accumulate_grad_batches", None),
     )
 
     if config.get("tuning_lr", False):
