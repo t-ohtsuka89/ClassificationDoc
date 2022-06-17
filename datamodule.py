@@ -10,6 +10,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 from torch.utils.data import DataLoader
 from transformers.models.bert_japanese.tokenization_bert_japanese import BertJapaneseTokenizer
+from transformers.tokenization_utils_base import BatchEncoding
 
 from collate_fn import Padsequence
 from dataset import CreateBertDataset, CreateDataset
@@ -138,7 +139,7 @@ class BertDataModule(pl.LightningDataModule):
         tokenizer: BertJapaneseTokenizer = BertJapaneseTokenizer.from_pretrained(
             self.hparams["model_name"], do_lower_case=False
         )
-        inputs = tokenizer.batch_encode_plus(
+        inputs: BatchEncoding = tokenizer.batch_encode_plus(
             text_list, padding="max_length", max_length=512, return_tensors="np", truncation=True
         )
         mlb = MultiLabelBinarizer()
