@@ -95,10 +95,8 @@ class Bert(pl.LightningModule):
     def configure_optimizers(self):
         if self.hparams["optimizer"] == "Ranger":
             optimizer = Ranger(
-                [
-                    {"params": self.model.bert.encoder.layer[-1].parameters(), "lr": 5e-5},
-                    {"params": self.model.classifier.parameters(), "lr": self.hparams["learning_rate"]},
-                ]
+                self.parameters(),
+                lr=self.hparams["learning_rate"],
             )
         else:
             optimizer = torch.optim.__dict__[self.hparams["optimizer"]](
