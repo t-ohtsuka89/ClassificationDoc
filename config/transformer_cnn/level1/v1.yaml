@@ -6,12 +6,12 @@ log:
 dataset:
   text_dir: data/texts
   label_dir: data/label_level1
+  batch_size: 8
 
 method: TransformerCNN
 
-train:
-  batch_size: 8
-  n_epoch: 100
+trainer:
+  max_epochs: 100
 
 model:
   emb_size: 256

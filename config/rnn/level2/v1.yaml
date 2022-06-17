@@ -6,13 +6,12 @@ log:
 dataset:
   text_dir: data/texts
   label_dir: data/label_level2
+  batch_size: 64
 
 method: RNN
 
-train:
-  batch_size: 64
+trainer:
   max_epochs: 1000
-  min_epochs: null
 
 model:
   emb_size: 8

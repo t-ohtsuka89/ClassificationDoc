@@ -6,11 +6,11 @@ log:
 dataset:
   text_dir: data/texts
   label_dir: data/label_level2
+  batch_size: 32
 
 method: Bert
 
-train:
-  batch_size: 32
+trainer:
   max_epochs: 10000
   min_epochs: 1500
 

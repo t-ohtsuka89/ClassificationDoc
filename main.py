@@ -42,7 +42,7 @@ def main(args):
             model_name=config["model"]["model_name"],
             text_dir=config["dataset"]["text_dir"],
             label_dir=label_dir,
-            batch_size=config["train"]["batch_size"],
+            batch_size=config["dataset"]["batch_size"],
             seed=seed,
             padding_idx=PADDING_IDX,
         )
@@ -50,7 +50,7 @@ def main(args):
         dm = MyDataModule(
             config["dataset"]["text_dir"],
             label_dir,
-            batch_size=config["train"]["batch_size"],
+            batch_size=config["dataset"]["batch_size"],
             seed=seed,
             add_special_token=config.get("add_special_token", False),
             padding_idx=PADDING_IDX,
@@ -88,10 +88,8 @@ def main(args):
 
     trainer = Trainer(
         gpus=1,
-        max_epochs=config["train"]["max_epochs"],
-        min_epochs=config["train"]["min_epochs"],
         callbacks=callbacks,
-        accumulate_grad_batches=config["train"].get("accumulate_grad_batches", None),
+        **config["trainer"],
     )
 
     if config.get("tuning_lr", False):
