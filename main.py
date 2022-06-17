@@ -11,6 +11,7 @@ from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 import models
 from datamodule import BertDataModule, MyDataModule
 from special_tokens import SpecialToken
+from utils.line import send_line_notify
 from utils.logging import set_logger
 
 
@@ -107,3 +108,4 @@ def main(args):
 
 if __name__ == "__main__":
     main(get_args())
+    send_line_notify("学習が終了しました.")
