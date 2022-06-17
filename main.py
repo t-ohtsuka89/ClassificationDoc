@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 import models
-from datamodule import MyDataModule
+from datamodule import BertDataModule, MyDataModule
 from special_tokens import SpecialToken
 from utils.logging import set_logger
 
@@ -37,14 +37,24 @@ def main(args):
     # パラメータの設定
     PADDING_IDX = SpecialToken.PAD
 
-    dm = MyDataModule(
-        config["dataset"]["text_dir"],
-        label_dir,
-        batch_size=config["train"]["batch_size"],
-        seed=seed,
-        add_special_token=config.get("add_special_token", False),
-        padding_idx=PADDING_IDX,
-    )
+    if config["method"] == "Bert":
+        dm = BertDataModule(
+            model_name=config["model"]["model_name"],
+            text_dir=config["dataset"]["text_dir"],
+            label_dir=label_dir,
+            batch_size=config["train"]["batch_size"],
+            seed=seed,
+            padding_idx=PADDING_IDX,
+        )
+    else:
+        dm = MyDataModule(
+            config["dataset"]["text_dir"],
+            label_dir,
+            batch_size=config["train"]["batch_size"],
+            seed=seed,
+            add_special_token=config.get("add_special_token", False),
+            padding_idx=PADDING_IDX,
+        )
 
     dm.setup(stage="fit")
     vocab_size = dm.vocab_size
@@ -80,7 +90,7 @@ def main(args):
         gpus=1,
         max_epochs=config["train"]["max_epochs"],
         min_epochs=config["train"]["min_epochs"],
-        callbacks=[checkpoint_callback, early_stopping_callback],
+        callbacks=callbacks,
         accumulate_grad_batches=4,
     )
 

@@ -1,3 +1,4 @@
+from .bert import Bert
 from .cnn import CNN
 from .rnn import RNN
 from .transformer_classifier import TransformerClassifier
@@ -8,4 +9,5 @@ __all__ = [
     "RNN",
     "TransformerClassifier",
     "TransformerCNN",
+    "Bert",
 ]

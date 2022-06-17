@@ -9,9 +9,10 @@ import regex
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MultiLabelBinarizer
 from torch.utils.data import DataLoader
+from transformers.models.bert_japanese.tokenization_bert_japanese import BertJapaneseTokenizer
 
 from collate_fn import Padsequence
-from dataset import CreateDataset
+from dataset import CreateBertDataset, CreateDataset
 from special_tokens import SpecialToken
 
 
@@ -94,6 +95,90 @@ class MyDataModule(pl.LightningDataModule):
             return l
         else:
             return [word2id.get(word, SpecialToken.UNK) for word in text.translate(table).split()]
+
+    def make_dataset(self, labels_dir: str, texts_dir: str):
+        text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
+        text_list: list[str] = []
+        label_list: list[list[str]] = []
+        for text_file in text_files:
+            file_basename = os.path.basename(text_file)
+            p = regex.match(r"(.*)_k_s.txt", file_basename)
+            assert p is not None
+            file_id = p.groups()[0]
+
+            with open(os.path.join(texts_dir, file_id + "_k_s.txt"), "r") as text_file, open(
+                os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
+            ) as label_file:
+                text = text_file.read().strip()
+                label = label_file.read().strip().split("\n")
+                if "" in label:
+                    continue
+                text_list.append(text)
+                label_list.append(label)
+
+        return text_list, label_list
+
+
+class BertDataModule(pl.LightningDataModule):
+    def __init__(
+        self,
+        model_name: str,
+        text_dir: str,
+        label_dir: str,
+        batch_size: int,
+        seed: int,
+        add_special_token: bool = False,
+        padding_idx: int = 0,
+    ):
+        super().__init__()
+        self.save_hyperparameters()
+
+    def setup(self, stage: str | None):
+        text_list, label_list = self.make_dataset(self.hparams["label_dir"], self.hparams["text_dir"])
+        tokenizer: BertJapaneseTokenizer = BertJapaneseTokenizer.from_pretrained(
+            self.hparams["model_name"], do_lower_case=False
+        )
+        inputs = tokenizer.batch_encode_plus(
+            text_list, padding="max_length", max_length=512, return_tensors="np", truncation=True
+        )
+        mlb = MultiLabelBinarizer()
+        label_list = mlb.fit_transform(label_list)
+
+        input_ids_train, val_test_input_ids, mask_train, val_test_mask, y_train, val_test_label = train_test_split(
+            inputs["input_ids"],
+            inputs["attention_mask"],
+            label_list,
+            test_size=0.2,
+            shuffle=True,
+            random_state=self.hparams["seed"],
+        )
+        input_ids_val, input_ids_test, mask_val, mask_test, y_val, y_test = train_test_split(
+            val_test_input_ids,
+            val_test_mask,
+            val_test_label,
+            test_size=0.5,
+            shuffle=True,
+            random_state=self.hparams["seed"],
+        )
+        self.dataset_train = CreateBertDataset(input_ids_train, y_train, mask_train)
+        self.dataset_valid = CreateBertDataset(input_ids_val, y_val, mask_val)
+        self.dataset_test = CreateBertDataset(input_ids_test, y_test, mask_test)
+        self.vocab_size = tokenizer.vocab_size
+        self.output_size = len(mlb.classes_)
+        self.max_len = max(map(len, text_list))
+
+    def train_dataloader(self):
+        return DataLoader(
+            self.dataset_train,
+            batch_size=self.hparams["batch_size"],
+            shuffle=True,
+        )
+
+    def val_dataloader(self):
+        return DataLoader(self.dataset_valid, batch_size=1, shuffle=False)
+
+    def test_dataloader(self):
+        return DataLoader(self.dataset_test, batch_size=1, shuffle=False)
 
     def make_dataset(self, labels_dir: str, texts_dir: str):
         text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
