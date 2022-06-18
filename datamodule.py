@@ -25,11 +25,10 @@ class MyDataModule(pl.LightningDataModule):
         batch_size: int,
         seed: int,
         add_special_token: bool = False,
-        padding_idx: int = 0,
     ):
         super().__init__()
         self.save_hyperparameters()
-        self.collate_fn = Padsequence(padding_idx)
+        self.collate_fn = Padsequence(SpecialToken.PAD)
         self.special_token_num = len(SpecialToken)
         assert len(SpecialToken) == 5
 
@@ -129,7 +128,6 @@ class BertDataModule(pl.LightningDataModule):
         batch_size: int,
         seed: int,
         add_special_token: bool = False,
-        padding_idx: int = 0,
     ):
         super().__init__()
         self.save_hyperparameters()
