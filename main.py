@@ -97,6 +97,9 @@ def main(args):
         lr_finder = trainer.tuner.lr_find(model, datamodule=dm)
         assert lr_finder is not None
         new_lr = lr_finder.suggestion()
+        logger.info("-" * 20)
+        logger.info(f"best learning_rate: {new_lr}")
+        logger.info("-" * 20)
         model.hparams["learning_rate"] = new_lr
 
     logger.info("Training...")
