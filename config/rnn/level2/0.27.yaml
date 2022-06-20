@@ -1,0 +1,29 @@
+seed: 123
+
+log:
+  filename: train.log
+
+dataset:
+  text_dir: data/texts
+  label_dir: data/label_level2
+  batch_size: 64
+
+method: RNN
+
+trainer:
+  max_epochs: 1000
+  accumulate_grad_batches: 4
+
+model:
+  emb_size: 256
+  hidden_size: 256
+  num_layers: 1
+  drop_rate: 0.2
+  optimizer: RAdam
+  learning_rate: 1.0e-3
+  T_max: null
+
+early_stopping:
+  monitor: train_loss
+  mode: min
+  patience: 350
