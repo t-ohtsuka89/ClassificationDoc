@@ -111,5 +111,5 @@ def main(args):
 
 
 if __name__ == "__main__":
-    main(get_args())
-    send_line_notify("学習が終了しました.")
+    config, metrics = main(get_args())
+    send_line_notify(f"学習が終了しました.\nconfig: {config}\ntest_f1: {metrics['test_f1']}")
