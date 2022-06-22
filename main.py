@@ -107,6 +107,7 @@ def main(args):
     logger.info("Testing...")
     trainer.test(datamodule=dm)
     logger.info("Done.")
+    return config, trainer.callback_metrics
 
 
 if __name__ == "__main__":
