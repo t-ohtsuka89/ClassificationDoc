@@ -49,22 +49,17 @@ class RNN(pl.LightningModule):
         initrange = 0.1
         self.encoder.weight.data.uniform_(-initrange, initrange)
 
-    def forward(self, x: Tensor, seq_len: Tensor):
-        embedded_padded_sequence: Tensor = self.encoder(x)
-        packed_x = torch.nn.utils.rnn.pack_padded_sequence(
-            embedded_padded_sequence, seq_len, batch_first=True, enforce_sorted=False
-        )
-        packed_lstm_out, (hidden, cell) = self.bilstm(packed_x)
-        lstm_out, input_sizes = torch.nn.utils.rnn.pad_packed_sequence(packed_lstm_out, batch_first=True)
-        out: Tensor = lstm_out[:, -1]
-        out = self.classifier(out)
+    def forward(self, x: Tensor):
+        x = self.encoder(x)
+        lstm_out, (hidden, cell) = self.bilstm(x)
+        bilstm_out = torch.cat([hidden[0], hidden[1]], dim=1)
+        out: Tensor = self.classifier(bilstm_out)
         return out
 
     def training_step(self, batch: dict[str, Tensor], batch_idx):
         inputs = batch["input"]
         labels = batch["labels"]
-        lengths = batch["lengths"].cpu()
-        outputs = self.forward(inputs, lengths)
+        outputs = self.forward(inputs)
         preds = torch.sigmoid(outputs)
         loss: torch.Tensor = self.criterion(outputs, labels)
         self.train_f1(preds, labels.to(dtype=torch.int))
@@ -75,8 +70,7 @@ class RNN(pl.LightningModule):
     def validation_step(self, batch: dict[str, Tensor], batch_idx):
         inputs = batch["input"]
         labels = batch["labels"]
-        lengths = batch["lengths"].cpu()
-        outputs = self.forward(inputs, lengths)
+        outputs = self.forward(inputs)
         preds = torch.sigmoid(outputs)
         loss: torch.Tensor = self.criterion(outputs, labels)
         self.valid_f1(preds, labels.to(dtype=torch.int))
@@ -86,8 +80,7 @@ class RNN(pl.LightningModule):
     def test_step(self, batch: dict[str, Tensor], batch_idx):
         inputs = batch["input"]
         labels = batch["labels"]
-        lengths = batch["lengths"].cpu()
-        outputs = self.forward(inputs, lengths)
+        outputs = self.forward(inputs)
         preds = torch.sigmoid(outputs)
         self.test_f1(preds, labels.to(dtype=torch.int))
         self.log("test_f1", self.test_f1, on_step=False, on_epoch=True)
