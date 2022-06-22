@@ -35,9 +35,6 @@ def main(args):
 
     label_dir = config["dataset"]["label_dir"]
 
-    # パラメータの設定
-    PADDING_IDX = SpecialToken.PAD
-
     if config["method"] == "Bert":
         dm = BertDataModule(
             model_name=config["model"]["model_name"],
@@ -45,7 +42,6 @@ def main(args):
             label_dir=label_dir,
             batch_size=config["dataset"]["batch_size"],
             seed=seed,
-            padding_idx=PADDING_IDX,
         )
     else:
         dm = MyDataModule(
@@ -54,7 +50,6 @@ def main(args):
             batch_size=config["dataset"]["batch_size"],
             seed=seed,
             add_special_token=config.get("add_special_token", False),
-            padding_idx=PADDING_IDX,
         )
 
     dm.setup(stage="fit")
@@ -64,7 +59,7 @@ def main(args):
     model: pl.LightningModule = getattr(models, config["method"])(
         vocab_size=vocab_size,
         output_size=output_size,
-        padding_idx=PADDING_IDX,
+        padding_idx=SpecialToken.PAD,
         **config["model"],
     )
 
