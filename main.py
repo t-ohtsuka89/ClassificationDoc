@@ -50,6 +50,7 @@ def main(args):
             batch_size=config["dataset"]["batch_size"],
             seed=seed,
             add_special_token=config.get("add_special_token", False),
+            n_truncation=config["dataset"].get("n_trancation", None),
         )
 
     dm.setup(stage="fit")

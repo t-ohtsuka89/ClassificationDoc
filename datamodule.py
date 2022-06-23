@@ -2,6 +2,7 @@ import glob
 import os
 import string
 from collections import defaultdict
+from typing import Optional
 
 import MeCab
 import pytorch_lightning as pl
@@ -27,6 +28,7 @@ class MyDataModule(pl.LightningDataModule):
         batch_size: int,
         seed: int,
         add_special_token: bool = False,
+        n_truncation: Optional[int] = None,
     ):
         super().__init__()
         self.save_hyperparameters()
@@ -53,6 +55,8 @@ class MyDataModule(pl.LightningDataModule):
         }
         # IDへ変換
         text_list = [self.tokenizer(line, word2id) for line in text_list]
+        if self.hparams["n_truncation"] is not None:
+            text_list = [self.truncation(ids, self.hparams["n_truncation"]) for ids in text_list]
 
         X_train, val_test_text, y_train, val_test_label = train_test_split(
             text_list,
@@ -119,6 +123,13 @@ class MyDataModule(pl.LightningDataModule):
                 label_list.append(label)
 
         return text_list, label_list
+
+    @staticmethod
+    def truncation(seq: list, max_seq_len=512):
+        if len(seq) > max_seq_len:
+            return seq[:max_seq_len]
+        else:
+            return seq
 
 
 class TransformersDataModule(pl.LightningDataModule):
@@ -200,4 +211,4 @@ class TransformersDataModule(pl.LightningDataModule):
                 text_list.append(text)
                 label_list.append(label)
 
-        return text_list, label_list
+            return text_list, label_list
