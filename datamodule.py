@@ -89,7 +89,7 @@ class MyDataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.dataset_test, batch_size=1, shuffle=False, collate_fn=self.collate_fn)
 
-    def tokenizer(self, text: str, word2id: dict[str, int]):
+    def tokenizer(self, text: str, word2id: dict[str, int]) -> list[int]:
         table = str.maketrans(string.punctuation, " " * len(string.punctuation))
         if self.hparams["add_special_token"]:
             l = [word2id.get(word, SpecialToken.UNK) for word in text.translate(table).split()]
