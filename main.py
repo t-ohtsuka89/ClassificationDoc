@@ -6,7 +6,7 @@ import torch
 import torch.nn
 import yaml
 from pytorch_lightning import Trainer
-from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
+from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint, StochasticWeightAveraging
 
 import models
 from datamodule import MyDataModule, TransformersDataModule
@@ -79,6 +79,11 @@ def main(args):
         check_on_train_epoch_end=config["early_stopping"]["monitor"] == "val_f1",
         **config["early_stopping"],
     )
+
+    if config.get("enable_swa", False):
+        stochastic_weight_averaging_callback = StochasticWeightAveraging(swa_lrs=1e-2)
+        callbacks.append(stochastic_weight_averaging_callback)
+
     callbacks.append(checkpoint_callback)
     callbacks.append(early_stopping_callback)
 
