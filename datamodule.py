@@ -211,4 +211,4 @@ class TransformersDataModule(pl.LightningDataModule):
                 text_list.append(text)
                 label_list.append(label)
 
-            return text_list, label_list
+        return text_list, label_list
