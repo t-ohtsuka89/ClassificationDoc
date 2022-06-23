@@ -106,23 +106,32 @@ class MyDataModule(pl.LightningDataModule):
         text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
         text_list: list[str] = []
         label_list: list[list[str]] = []
-        for text_file in text_files:
-            file_basename = os.path.basename(text_file)
-            p = regex.match(r"(.*)_k_s.txt", file_basename)
-            assert p is not None
-            file_id = p.groups()[0]
-
-            with open(os.path.join(texts_dir, file_id + "_k_s.txt"), "r") as text_file, open(
-                os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
-            ) as label_file:
-                text = text_file.read().strip()
-                label = label_file.read().strip().split("\n")
-                if "" in label:
-                    continue
-                text_list.append(text)
-                label_list.append(label)
+        file_ids = [self.get_fileid(filepath) for filepath in text_files]
+        for file_id in file_ids:
+            try:
+                paths = glob.glob(os.path.join(texts_dir, file_id + "_k_?.txt"))
+                assert len(paths) == 1
+                with open(paths[0], "r") as text_file, open(
+                    os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
+                ) as label_file:
+                    text = text_file.read().strip()
+                    label = label_file.read().strip().split("\n")
+                    if "" in label:
+                        continue
+                    text_list.append(text)
+                    label_list.append(label)
+            except FileNotFoundError:
+                continue
 
         return text_list, label_list
+
+    @staticmethod
+    def get_fileid(filepath: str) -> str:
+        file_basename = os.path.basename(filepath)
+        p = regex.match(r"(.*)_k_(s|y).txt", file_basename)
+        assert p is not None
+        fileid = p.groups()[0]
+        return fileid
 
     @staticmethod
     def truncation(seq: list, max_seq_len=512):
@@ -195,20 +204,29 @@ class TransformersDataModule(pl.LightningDataModule):
         text_files = glob.glob(os.path.join(texts_dir, "*.txt"))
         text_list: list[str] = []
         label_list: list[list[str]] = []
-        for text_file in text_files:
-            file_basename = os.path.basename(text_file)
-            p = regex.match(r"(.*)_k_s.txt", file_basename)
-            assert p is not None
-            file_id = p.groups()[0]
-
-            with open(os.path.join(texts_dir, file_id + "_k_s.txt"), "r") as text_file, open(
-                os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
-            ) as label_file:
-                text = text_file.read().strip()
-                label = label_file.read().strip().split("\n")
-                if "" in label:
-                    continue
-                text_list.append(text)
-                label_list.append(label)
+        file_ids = [self.get_fileid(filepath) for filepath in text_files]
+        for file_id in file_ids:
+            try:
+                paths = glob.glob(os.path.join(texts_dir, file_id + "_k_?.txt"))
+                assert len(paths) == 1
+                with open(paths[0], "r") as text_file, open(
+                    os.path.join(labels_dir, file_id + "_k_l.txt"), "r"
+                ) as label_file:
+                    text = text_file.read().strip()
+                    label = label_file.read().strip().split("\n")
+                    if "" in label:
+                        continue
+                    text_list.append(text)
+                    label_list.append(label)
+            except FileNotFoundError:
+                continue
 
         return text_list, label_list
+
+    @staticmethod
+    def get_fileid(filepath: str) -> str:
+        file_basename = os.path.basename(filepath)
+        p = regex.match(r"(.*)_k_(s|y).txt", file_basename)
+        assert p is not None
+        fileid = p.groups()[0]
+        return fileid
