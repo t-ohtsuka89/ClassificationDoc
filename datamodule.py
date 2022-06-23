@@ -121,7 +121,7 @@ class MyDataModule(pl.LightningDataModule):
         return text_list, label_list
 
 
-class BertDataModule(pl.LightningDataModule):
+class TransformersDataModule(pl.LightningDataModule):
     def __init__(
         self,
         model_name: str,

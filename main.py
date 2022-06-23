@@ -9,7 +9,7 @@ from pytorch_lightning import Trainer
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 
 import models
-from datamodule import BertDataModule, MyDataModule
+from datamodule import MyDataModule, TransformersDataModule
 from special_tokens import SpecialToken
 from utils.line import send_line_notify
 from utils.logging import set_logger
@@ -36,7 +36,7 @@ def main(args):
     label_dir = config["dataset"]["label_dir"]
 
     if config["method"] == "Bert":
-        dm = BertDataModule(
+        dm = TransformersDataModule(
             model_name=config["model"]["model_name"],
             text_dir=config["dataset"]["text_dir"],
             label_dir=label_dir,
