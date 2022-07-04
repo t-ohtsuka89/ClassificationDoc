@@ -13,5 +13,12 @@
       "strings": true
     }
   },
-  "yaml.format.enable": true
+  "yaml.format.enable": true,
+  "github.copilot.enable": {
+  " ()[]{}',\"`─‘’"
+    "*": true,
+    "yaml": true,
+    "plaintext": false,
+    "markdown": false
+  }
 }
