@@ -1,13 +1,13 @@
-seed: 0
+seed: 123
 
-log_path: config/cnn/level2/v1.log
+log_path: config/cnn/summary/level2-v1.log
 save_dir: ./models/checkpoints/cnn/level2-v1
 save_top_k: 1
 prefix: cnn
 
 dataset:
   data_module: MyDataModule
-  text_dir: data/texts
+  text_dir: data/summary
   label_dir: data/label_level2
   batch_size: 64
 
@@ -16,7 +16,7 @@ method: CNN
 trainer:
   gpus:
     - 0
-  max_epochs: 100
+  max_epochs: -1
 
 model:
   emb_size: 256

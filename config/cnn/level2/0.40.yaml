@@ -1,4 +1,4 @@
-seed: 0
+seed: 123
 
 log_path: config/cnn/level2/v1.log
 save_dir: ./models/checkpoints/cnn/level2-v1

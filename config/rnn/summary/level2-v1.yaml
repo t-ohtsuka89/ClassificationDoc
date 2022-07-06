@@ -1,24 +1,18 @@
-seed: 0
-message: "seedを0にした"
+seed: 123
 
-log_path: config/rnn/level2/v1.log
-save_dir: ./models/checkpoints/rnn/level2-v1
-save_top_k: 1
-prefix: rnn
+log:
+  filename: train.log
 
 dataset:
-  data_module: MyDataModule
-  text_dir: data/texts
+  text_dir: data/summary
   label_dir: data/label_level2
   batch_size: 64
 
 method: RNN
 
 trainer:
-  gpus:
-    - 0
-  max_epochs: 1000
-  accumulate_grad_batches: 4
+  max_epochs: -1
+  accumulate_grad_batches: 8
 
 model:
   emb_size: 256

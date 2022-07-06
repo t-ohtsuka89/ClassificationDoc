@@ -1,30 +1,26 @@
 seed: 123
 
-log_path: config/bert/level2/v1.log
-save_dir: ./models/checkpoints/bert/level2-v1
-save_top_k: 1
-prefix: bert
+log:
+  filename: train.log
 
 dataset:
-  data_module: TransformersDataModule
   text_dir: data/texts
   label_dir: data/label_level2
-  batch_size: 8
+  batch_size: 32
 
 method: Transformers
-swa_lrs: 1.0e-3
+tuning_lr: true
 
 trainer:
-  gpus:
-    - 2
   max_epochs: -1
-  min_epochs: 500
+  min_epochs: 1000
   accumulate_grad_batches: 8
 
 model:
-  model_name: cl-tohoku/bert-base-japanese-v2
+  model_name: nlp-waseda/roberta-base-japanese
   optimizer: Ranger
   learning_rate: 1.0e-3
+  enable_lldr: False
 
 early_stopping:
   monitor: train_loss

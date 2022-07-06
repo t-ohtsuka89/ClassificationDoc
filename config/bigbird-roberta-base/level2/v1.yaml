@@ -1,9 +1,9 @@
 seed: 123
 
-log_path: config/bert/level2/v1.log
-save_dir: ./models/checkpoints/bert/level2-v1
+log_path: config/bigbird-roberta-base/level2/v1.log
+save_dir: config/bigbird-roberta-base/level2/v1
 save_top_k: 1
-prefix: bert
+prefix: bigbird-roberta-base
 
 dataset:
   data_module: TransformersDataModule
@@ -12,19 +12,20 @@ dataset:
   batch_size: 8
 
 method: Transformers
-swa_lrs: 1.0e-3
+tuning_lr: false
 
 trainer:
   gpus:
-    - 2
+    - 0
   max_epochs: -1
-  min_epochs: 500
+  min_epochs: 1000
   accumulate_grad_batches: 8
 
 model:
-  model_name: cl-tohoku/bert-base-japanese-v2
+  model_name: google/bigbird-roberta-base
   optimizer: Ranger
   learning_rate: 1.0e-3
+  enable_lldr: False
 
 early_stopping:
   monitor: train_loss

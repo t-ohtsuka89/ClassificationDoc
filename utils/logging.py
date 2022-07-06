@@ -1,17 +1,18 @@
 from logging import DEBUG, FileHandler, Formatter, StreamHandler, getLogger
 
 
-def set_logger(logfile):
+def set_logger(log_path: str, log_level: int = DEBUG) -> None:
+    """
+    Set logger.
+    """
     logger = getLogger(__name__)
     logger.setLevel(DEBUG)
-
-    stream_handler = StreamHandler()
-    stream_handler.setFormatter(Formatter("%(asctime)s |%(levelname)s| %(message)s"))
-
-    file_handler = FileHandler(filename=logfile)
-    file_handler.setFormatter(Formatter("%(asctime)s |%(levelname)s| %(message)s"))
-
-    logger.addHandler(stream_handler)
-    logger.addHandler(file_handler)
-
-    return logger
+    formatter = Formatter("%(asctime)s - %(levelname)s - %(message)s")
+    handler = StreamHandler()
+    handler.setLevel(log_level)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    handler = FileHandler(log_path, mode="a")
+    handler.setLevel(log_level)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)

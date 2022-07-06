@@ -1,4 +1,4 @@
-seed: 0
+seed: 123
 
 log_path: config/cnn/level2/v1.log
 save_dir: ./models/checkpoints/cnn/level2-v1
@@ -8,7 +8,7 @@ prefix: cnn
 dataset:
   data_module: MyDataModule
   text_dir: data/texts
-  label_dir: data/label_level2
+  label_dir: data/label_level1
   batch_size: 64
 
 method: CNN
@@ -22,9 +22,9 @@ model:
   emb_size: 256
   out_channels: 200
   drop_rate: 0.1
-  optimizer: RAdam
-  learning_rate: 5.0e-3
-  T_max: 100
+  optimizer: Ranger
+  learning_rate: 1.0e-2
+  T_max: null
 
 early_stopping:
   monitor: val_f1

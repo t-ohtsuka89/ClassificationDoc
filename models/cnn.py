@@ -1,7 +1,9 @@
+import pl_bolts
 import pytorch_lightning as pl
 import torch
 import torch.nn.functional as F
 import torchmetrics
+from pytorch_forecasting.optim import Ranger
 from torch import Tensor, nn
 
 
@@ -90,19 +92,21 @@ class CNN(pl.LightningModule):
         self.log("test_f1", self.test_f1, on_step=False, on_epoch=True)
 
     def configure_optimizers(self):
-        optimizer = torch.optim.__dict__[self.hparams["optimizer"]](
-            self.parameters(),
-            lr=self.hparams["learning_rate"],
-        )
+        optimizer_config = {
+            "params": self.parameters(),
+            "lr": self.hparams["learning_rate"],
+        }
+
+        if self.hparams["optimizer"] == "Ranger":
+            optimizer = Ranger(**optimizer_config)
+        else:
+            optimizer: torch.optim.Optimizer = torch.optim.__dict__[self.hparams["optimizer"]](**optimizer_config)
 
         if self.hparams["T_max"] is None:
             return optimizer
         else:
-            scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
-                optimizer,
-                T_max=self.hparams["T_max"],
-                eta_min=1e-5,
-                last_epoch=-1,
+            scheduler = pl_bolts.optimizers.LinearWarmupCosineAnnealingLR(
+                optimizer, warmup_epochs=10, max_epochs=self.hparams["T_max"]
             )
             return [optimizer], [scheduler]
 

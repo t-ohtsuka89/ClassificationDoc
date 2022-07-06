@@ -1,0 +1,35 @@
+seed: 123
+
+log_path: config/rnn/summary/level1-v1.log
+save_dir: config/rnn/summary/level1-v1
+save_top_k: 1
+prefix: rnn
+
+dataset:
+  data_module: MyDataModule
+  text_dir: data/summary
+  label_dir: data/label_level1
+  batch_size: 64
+
+method: RNN
+
+trainer:
+  gpus:
+    - 0
+  max_epochs: -1
+  accumulate_grad_batches: 1
+  auto_lr_find: false
+
+model:
+  emb_size: 256
+  hidden_size: 256
+  num_layers: 3
+  drop_rate: 0.25
+  optimizer: RAdam
+  learning_rate: 1.0e-4
+  T_max: null
+
+early_stopping:
+  monitor: train_loss
+  mode: min
+  patience: 350

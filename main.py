@@ -1,5 +1,6 @@
 import argparse
-import os
+from logging import DEBUG
+from typing import Any
 
 import pytorch_lightning as pl
 import torch
@@ -15,102 +16,128 @@ from utils.line import send_line_notify
 from utils.logging import set_logger
 
 
-def get_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("config_path", type=str, help="設定ファイル(.yaml)")
-    args = parser.parse_args()
-    return args
+def build_config(args: argparse.Namespace) -> dict:
+    """
+    Build config file.
+    """
+    with open(args.config, "r") as f:
+        config: dict[str, Any] = yaml.safe_load(f)
+    return config
 
 
-def main(args):
-    with open(args.config_path, "r") as f:
-        config = yaml.safe_load(f)
+def get_callbacks(config: dict) -> list:
+    """
+    Get callbacks.
+    """
+    callbacks = []
+    if config.get("save_top_k", 1) > 0:
+        callbacks.append(
+            ModelCheckpoint(
+                dirpath=config["save_dir"],
+                save_top_k=config["save_top_k"],
+                monitor="val_f1",
+                mode="max",
+            )
+        )
+    if config["early_stopping"]["patience"] > 0:
+        callbacks.append(
+            EarlyStopping(
+                verbose=True,
+                check_on_train_epoch_end=config["early_stopping"]["monitor"] == "val_f1",
+                **config["early_stopping"],
+            )
+        )
+    swa_lrs = config.get("swa_lrs", None)
+    if swa_lrs is not None:
+        callbacks.append(StochasticWeightAveraging(swa_lrs=swa_lrs))
+    return callbacks
 
-    logger = set_logger(config["log"]["filename"])
-    logger.info(config)
 
-    seed = config["seed"]
-    pl.seed_everything(seed)
+def get_args() -> argparse.Namespace:
+    """
+    Get command line arguments.
+    """
+    parser = argparse.ArgumentParser(description="Train a model.")
+    parser.add_argument(
+        "--config",
+        type=str,
+        help="Path to config file.",
+    )
+    return parser.parse_args()
+
+
+def main(args: argparse.Namespace):
+    """
+    main関数
+    """
+
+    # Load config file
+    config = build_config(args)
+
+    # Set loggerc
+    set_logger(config["log_path"], config.get("log_level", DEBUG))
+
+    # Set seed
+    pl.seed_everything(config["seed"])
     torch.backends.cudnn.deterministic = True  # type: ignore
 
-    label_dir = config["dataset"]["label_dir"]
-
-    if config["method"] == "Bert":
-        dm = TransformersDataModule(
+    # Create data module
+    if config["dataset"]["data_module"] == "MyDataModule":
+        data_module = MyDataModule(
+            text_dir=config["dataset"]["text_dir"],
+            label_dir=config["dataset"]["label_dir"],
+            batch_size=config["dataset"]["batch_size"],
+            seed=config["seed"],
+            add_special_token=config.get("add_special_token", False),
+            n_truncation=config.get("n_truncation", None),
+        )
+    elif config["dataset"]["data_module"] == "TransformersDataModule":
+        data_module = TransformersDataModule(
             model_name=config["model"]["model_name"],
             text_dir=config["dataset"]["text_dir"],
-            label_dir=label_dir,
+            label_dir=config["dataset"]["label_dir"],
             batch_size=config["dataset"]["batch_size"],
-            seed=seed,
+            seed=config["seed"],
+            add_special_token=config.get("add_special_token", False),
         )
     else:
-        dm = MyDataModule(
-            config["dataset"]["text_dir"],
-            label_dir,
-            batch_size=config["dataset"]["batch_size"],
-            seed=seed,
-            add_special_token=config.get("add_special_token", False),
-            n_truncation=config["dataset"].get("n_trancation", None),
-        )
+        raise ValueError("Unknown data module.")
 
-    dm.setup(stage="fit")
-    vocab_size = dm.vocab_size
-    output_size = dm.output_size
-
+    # Create model
+    data_module.setup(stage="fit")
     model: pl.LightningModule = getattr(models, config["method"])(
-        vocab_size=vocab_size,
-        output_size=output_size,
+        vocab_size=data_module.vocab_size,
+        output_size=data_module.output_size,
         padding_idx=SpecialToken.PAD,
         **config["model"],
     )
 
-    callbacks = []
+    # Create callbacks
+    callbacks = get_callbacks(config)
 
-    checkpoint_callback = ModelCheckpoint(
-        dirpath=os.path.join("models", "checkpoints"),
-        filename="model_best",
-        monitor="val_f1",
-        verbose=False,
-        save_last=False,
-        save_top_k=1,
-        save_weights_only=False,
-        mode="max",
-    )
-    early_stopping_callback = EarlyStopping(
-        check_on_train_epoch_end=config["early_stopping"]["monitor"] == "val_f1",
-        **config["early_stopping"],
-    )
-
-    if config.get("enable_swa", False):
-        stochastic_weight_averaging_callback = StochasticWeightAveraging(swa_lrs=1e-2)
-        callbacks.append(stochastic_weight_averaging_callback)
-
-    callbacks.append(checkpoint_callback)
-    callbacks.append(early_stopping_callback)
-
+    # Create trainer
     trainer = Trainer(
-        gpus=1,
         callbacks=callbacks,
         **config["trainer"],
     )
 
-    if config.get("tuning_lr", False):
-        lr_finder = trainer.tuner.lr_find(model, datamodule=dm)
+    assert isinstance(config["trainer"], dict)
+    if config["trainer"].get("auto_lr_find", False):
+        lr_finder = trainer.tuner.lr_find(model, datamodule=data_module)
         assert lr_finder is not None
         new_lr = lr_finder.suggestion()
-        logger.info("-" * 20)
-        logger.info(f"best learning_rate: {new_lr}")
-        logger.info("-" * 20)
         model.hparams["learning_rate"] = new_lr
 
-    logger.info("Training...")
-    trainer.fit(model, datamodule=dm)
-    logger.info("Testing...")
-    trainer.test(datamodule=dm)
-    logger.info("Done.")
-    return config, trainer.callback_metrics
+    # Train model
+    trainer.fit(model, data_module)
+    trainer.test(model, data_module)
+
+    # Send line notify
+    metrics = trainer.callback_metrics
+    send_line_notify(f"{config['prefix']} finished.")
+    send_line_notify(f"metrics: {metrics}")
+    send_line_notify(f"config: {config}")
 
 
 if __name__ == "__main__":
-    config, metrics = main(get_args())
-    send_line_notify(f"学習が終了しました.\nconfig: {config}\ntest_f1: {metrics['test_f1']}")
+    main(get_args())

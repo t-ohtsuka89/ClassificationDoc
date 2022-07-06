@@ -1,28 +1,29 @@
 seed: 123
 
-log_path: config/bert/level1/v1.log
+log_path: config/bert/summary/level1-v1.log
 save_dir: ./models/checkpoints/bert/level1-v1
 save_top_k: 1
 prefix: bert
 
 dataset:
   data_module: TransformersDataModule
-  text_dir: data/texts
+  text_dir: data/summary
   label_dir: data/label_level1
   batch_size: 32
 
-method: Bert
+method: Transformers
 
 trainer:
+  gpus:
+    - 1
   max_epochs: -1
-  min_epochs: 2500
-  accumulate_grad_batches: 4
+  min_epochs: 500
+  accumulate_grad_batches: 8
 
 model:
-  model_name: cl-tohoku/bert-base-japanese
+  model_name: cl-tohoku/bert-base-japanese-v2
   optimizer: Ranger
   learning_rate: 1.0e-3
-  T_max: null
 
 early_stopping:
   monitor: train_loss

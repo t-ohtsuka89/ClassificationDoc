@@ -1,9 +1,12 @@
 seed: 123
 
-log:
-  filename: train.log
+log_path: config/cnn/level2/v1.log
+save_dir: ./models/checkpoints/cnn/level2-v1
+save_top_k: 1
+prefix: cnn
 
 dataset:
+  data_module: MyDataModule
   text_dir: data/texts
   label_dir: data/label_level1
   batch_size: 64
@@ -11,17 +14,20 @@ dataset:
 method: CNN
 
 trainer:
-  max_epochs: 100
+  gpus:
+    - 0
+  max_epochs: -1
+  accumulate_grad_batches: 4
 
 model:
   emb_size: 256
   out_channels: 200
   drop_rate: 0.1
-  optimizer: RAdam
+  optimizer: Ranger
   learning_rate: 1.0e-2
-  T_max: 100
+  T_max: null
 
 early_stopping:
   monitor: val_f1
   mode: max
-  patience: 20
+  patience: 100

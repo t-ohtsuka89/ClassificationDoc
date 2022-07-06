@@ -1,9 +1,12 @@
 seed: 123
 
-log:
-  filename: train.log
+log_path: config/bert/level2/v1.log
+save_dir: ./models/checkpoints/bert/level2-v1
+save_top_k: 1
+prefix: bert
 
 dataset:
+  data_module: TransformersDataModule
   text_dir: data/texts
   label_dir: data/label_level2
 
